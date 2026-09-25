@@ -4,6 +4,8 @@ import { RotateCcw, Play, Pause, Volume2, VolumeX, Grid, Save, Plus, Eraser } fr
 import { soundController } from "@/components/SoundController";
 import { GameOverScreen, WinScreen, StartScreen } from '@/components/GameScreens';
 import IntroScreen from '@/components/IntroScreen';
+import { alignGroundEnemy, enemySpriteYOffset, playerSpriteBounds } from '@/game/geometry';
+import { DIRECTION_KEYS, directionAtPoint } from '@/game/input';
 
 const GRAVITY = 0.6;
 const JUMP_FORCE = -14;
@@ -13,6 +15,8 @@ export default function Game() {
   const canvasRef = useRef(null);
   const gameLoopRef = useRef(null);
   const keysRef = useRef({});
+  const directionPointerRef = useRef(null);
+  const jumpPointersRef = useRef(new Set());
 
   const [gameState, setGameState] = useState('intro'); // intro, start, playing, paused, gameover, win
   const [introPhase, setIntroPhase] = useState(0);
@@ -438,7 +442,7 @@ export default function Game() {
       offset: 0,
       platforms: levelData.platforms.map(p => ({...p, isUsed: false, bounceY: 0})),
       coins: levelData.coins.map(c => ({...c, collected: false})),
-      enemies: levelData.enemies.map(e => ({...e, alive: true})),
+      enemies: levelData.enemies.map(e => ({...alignGroundEnemy(e, levelData.platforms), alive: true})),
       powerUps: (levelData.powerUps || []).map(p => ({
         ...p,
         collected: false,
@@ -473,9 +477,9 @@ export default function Game() {
     }, [getLevelData]);
 
   const drawPlayer = (ctx, player, offset) => {
-    const screenX = player.x - offset;
-    const isBig = player.powerUp === 'big' || player.powerUp === 'fire';
-    const px = isBig ? 2.5 : 2;
+    const sprite = playerSpriteBounds(player);
+    const screenX = sprite.x - offset;
+    const px = sprite.pixelSize;
     const starFlash = player.starTimer > 0 && Math.floor(Date.now() / 50) % 4;
 
     ctx.save();
@@ -491,7 +495,7 @@ export default function Game() {
     const frame = Math.floor(Date.now() / 100) % 3;
     const flip = !player.facingRight;
 
-    const yOffset = isBig ? player.y - 15 : player.y;
+    const yOffset = sprite.y;
 
     const drawPixel = (x, y, color) => {
       // Star rainbow effect
@@ -500,7 +504,7 @@ export default function Game() {
         color = colors[(starFlash + Math.floor(x / 3)) % 4];
       }
       ctx.fillStyle = color;
-      const px_x = flip ? screenX + 40 - (x + 1) * px : screenX + x * px;
+      const px_x = flip ? screenX + sprite.width - (x + 1) * px : screenX + x * px;
       ctx.fillRect(px_x, yOffset + y * px, px, px);
     };
 
@@ -787,6 +791,8 @@ export default function Game() {
     const screenX = enemy.x - offset;
     const frame = Math.floor(Date.now() / 200) % 2;
     const px = 2;
+    ctx.save();
+    ctx.translate(0, enemySpriteYOffset(enemy));
 
     const drawPixel = (x, y, color) => {
       ctx.fillStyle = color;
@@ -1052,6 +1058,7 @@ export default function Game() {
       ctx.arc(screenX + 26, enemy.y + 6, 2, 0, Math.PI * 2);
       ctx.fill();
     }
+    ctx.restore();
   };
 
   const drawPowerUp = (ctx, powerUp, offset) => {
@@ -2231,12 +2238,20 @@ export default function Game() {
       keysRef.current[e.code] = false;
     };
 
+    const handleBlur = () => {
+      keysRef.current = {};
+      directionPointerRef.current = null;
+      jumpPointersRef.current.clear();
+    };
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleBlur);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
     };
   }, []);
 
@@ -2407,12 +2422,48 @@ export default function Game() {
     setIsMuted(muted);
   };
 
+  const updatePadDirection = (event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const direction = directionAtPoint(rect, event.clientX, event.clientY);
+    DIRECTION_KEYS.forEach(key => { keysRef.current[key] = key === direction; });
+  };
+
+  const handlePadPointerDown = (event) => {
+    if (directionPointerRef.current !== null) return;
+    event.preventDefault();
+    directionPointerRef.current = event.pointerId;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    updatePadDirection(event);
+  };
+
+  const handlePadPointerMove = (event) => {
+    if (directionPointerRef.current === event.pointerId) updatePadDirection(event);
+  };
+
+  const handlePadPointerEnd = (event) => {
+    if (directionPointerRef.current !== event.pointerId) return;
+    directionPointerRef.current = null;
+    DIRECTION_KEYS.forEach(key => { keysRef.current[key] = false; });
+  };
+
+  const handleJumpPointerDown = (event) => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    jumpPointersRef.current.add(event.pointerId);
+    keysRef.current['Space'] = true;
+  };
+
+  const handleJumpPointerEnd = (event) => {
+    jumpPointersRef.current.delete(event.pointerId);
+    keysRef.current['Space'] = jumpPointersRef.current.size > 0;
+  };
+
   return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
-      <div className="relative">
+    <div className="min-h-screen bg-black flex flex-col items-center justify-start sm:justify-center p-4">
+      <div className="relative w-full max-w-[800px]">
         {/* Game Header */}
-        <div className="flex items-center justify-between mb-0 px-4 py-3 bg-black border-b-4 border-[#C84C0C]" style={{ fontFamily: 'monospace' }}>
-          <div className="flex items-center gap-10">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-0 px-2 sm:px-4 py-3 bg-black border-b-4 border-[#C84C0C]" style={{ fontFamily: 'monospace' }}>
+          <div className="flex flex-wrap items-center gap-3 sm:gap-10">
             {[['MARIO', String(score).padStart(6,'0'), 'text-white'], ['COINS', `¤×${String(Math.floor(score/100)).padStart(2,'0')}`, 'text-[#F8D830]'], ['WORLD', `${level}-1`, 'text-white'], ['TIME', '∞', 'text-white'], ['LIVES', `×${lives}`, 'text-white']].map(([label, val, cls]) => (
               <div key={label} className="text-center"><span className="text-white font-bold text-xs block tracking-wider">{label}</span><div className={`${cls} font-bold text-lg tracking-wider`}>{val}</div></div>
             ))}
@@ -2481,7 +2532,7 @@ export default function Game() {
             onMouseDown={handleCanvasClick}
             onMouseMove={handleMouseMove}
             onMouseLeave={() => mouseRef.current = null}
-            className={`bg-sky-300 block max-w-full ${gameState === 'editor' ? 'cursor-none' : ''}`}
+            className={`bg-sky-300 block w-full h-auto ${gameState === 'editor' ? 'cursor-none' : ''}`}
             style={{ imageRendering: 'pixelated' }}
           />
 
@@ -2494,14 +2545,21 @@ export default function Game() {
           {gameState === 'win' && <WinScreen score={score} onRestart={() => startGame(1)} />}
         </div>
         {/* Mobile Controls */}
-        <div className="mt-4 flex justify-between items-center px-4 md:hidden" style={{fontFamily:'monospace'}}>
-          <div className="relative w-32 h-32">
-            {[['ArrowUp','top-0 left-1/2 -translate-x-1/2'],['ArrowDown','bottom-0 left-1/2 -translate-x-1/2'],['ArrowLeft','left-0 top-1/2 -translate-y-1/2'],['ArrowRight','right-0 top-1/2 -translate-y-1/2']].map(([key,pos])=>(<button key={key} aria-label={key.replace('Arrow', 'Move ')} className={`absolute ${pos} w-10 h-10 bg-[#303030] active:bg-[#505050] border-2 border-black rounded-sm`} onTouchStart={()=>keysRef.current[key]=true} onTouchEnd={()=>keysRef.current[key]=false}/>))}
+        <div className="touch-controls mt-4 justify-between items-center gap-2 sm:px-4" style={{fontFamily:'monospace'}}>
+          <div
+            className="relative w-32 h-32"
+            onPointerDown={handlePadPointerDown}
+            onPointerMove={handlePadPointerMove}
+            onPointerUp={handlePadPointerEnd}
+            onPointerCancel={handlePadPointerEnd}
+            onLostPointerCapture={handlePadPointerEnd}
+          >
+            {[['ArrowUp','top-0 left-1/2 -translate-x-1/2','↑'],['ArrowDown','bottom-0 left-1/2 -translate-x-1/2','↓'],['ArrowLeft','left-0 top-1/2 -translate-y-1/2','←'],['ArrowRight','right-0 top-1/2 -translate-y-1/2','→']].map(([key,pos,glyph])=>(<button key={key} aria-label={key.replace('Arrow', 'Move ')} className={`absolute ${pos} w-10 h-10 bg-[#303030] active:bg-[#505050] border-2 border-black rounded-sm text-white text-xl font-bold`}>{glyph}</button>))}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-[#303030] border-2 border-black rounded-sm"/>
           </div>
           <div className="flex gap-4 items-center">
-            <button className="w-14 h-14 rounded-full bg-[#A00000] active:bg-[#E52521] border-4 border-[#600000] text-white font-bold text-xl shadow-lg" onTouchStart={()=>keysRef.current['Space']=true} onTouchEnd={()=>keysRef.current['Space']=false}>A</button>
-            <button className="w-14 h-14 rounded-full bg-[#A00000] active:bg-[#E52521] border-4 border-[#600000] text-white font-bold text-xl shadow-lg -mt-4" onTouchStart={()=>keysRef.current['Space']=true} onTouchEnd={()=>keysRef.current['Space']=false}>B</button>
+            <button aria-label="Jump A" className="w-14 h-14 rounded-full bg-[#A00000] active:bg-[#E52521] border-4 border-[#600000] text-white font-bold text-xl shadow-lg" onPointerDown={handleJumpPointerDown} onPointerUp={handleJumpPointerEnd} onPointerCancel={handleJumpPointerEnd} onLostPointerCapture={handleJumpPointerEnd}>A</button>
+            <button aria-label="Jump B" className="w-14 h-14 rounded-full bg-[#A00000] active:bg-[#E52521] border-4 border-[#600000] text-white font-bold text-xl shadow-lg -mt-4" onPointerDown={handleJumpPointerDown} onPointerUp={handleJumpPointerEnd} onPointerCancel={handleJumpPointerEnd} onLostPointerCapture={handleJumpPointerEnd}>B</button>
           </div>
         </div>
       </div>

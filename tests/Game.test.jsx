@@ -357,13 +357,13 @@ describe('game entry and first frame', () => {
     stepFrames(30);
 
     const right = screen.getByRole('button', { name: 'Move Right' });
-    fireEvent.touchStart(right);
+    fireEvent.pointerDown(right, { pointerId: 1, clientX: 120, clientY: 64 });
     stepFrames(2);
-    fireEvent.touchEnd(right);
-    const jump = screen.getByRole('button', { name: 'A' });
-    fireEvent.touchStart(jump);
+    fireEvent.pointerUp(right, { pointerId: 1 });
+    const jump = screen.getByRole('button', { name: 'Jump A' });
+    fireEvent.pointerDown(jump, { pointerId: 2 });
     stepFrames(1);
-    fireEvent.touchEnd(jump);
+    fireEvent.pointerUp(jump, { pointerId: 2 });
 
     expect(soundController.playJump).toHaveBeenCalled();
   });
