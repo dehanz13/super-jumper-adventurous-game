@@ -11,6 +11,7 @@ import { alignGroundEnemy, beaconFinishBounds, createEditorCreature, creatureHur
 import { DIRECTION_KEYS, directionAtPoint } from '@/game/input';
 import { getLevelData, hasNextLevel } from '@/game/levels';
 import { takeFixedSteps } from '@/game/fixedStep';
+import { pointsForEvent } from '@/game/scoring';
 
 const GRAVITY = 0.6;
 const JUMP_FORCE = -14;
@@ -348,7 +349,7 @@ export default function Game() {
                           type: 'coin_pop',
                           frame: 0
                       });
-                      setScore(s => s + 200);
+                      setScore(s => s + pointsForEvent('blockShard'));
                       soundController.playCoin();
                   }
               } else {
@@ -377,7 +378,7 @@ export default function Game() {
         if (checkCollision(player, coinRect)) {
           coin.collected = true;
           setShards(count => count + 1);
-          setScore(s => s + 100);
+          setScore(s => s + pointsForEvent('shard'));
           soundController.playCoin();
         }
       }
@@ -429,7 +430,7 @@ export default function Game() {
         const puRect = { x: powerUp.x, y: powerUp.y, width: 30, height: 28 };
         if (checkCollision(player, puRect)) {
           powerUp.collected = true;
-          setScore(s => s + 1000);
+          setScore(s => s + pointsForEvent('powerUp'));
           soundController.playPowerUp();
 
           if (powerUp.type === 'powerCell') {
@@ -554,7 +555,7 @@ export default function Game() {
             if (checkCollision(playerHurtbox(player), signalSnareRect)) {
               if (player.starTimer > 0) {
                 enemy.alive = false;
-                setScore(s => s + 200);
+                setScore(s => s + pointsForEvent('creatureDefeat'));
                 soundController.playKick();
               } else if (player.powerUp !== 'small') {
                 player.powerUp = 'small';
@@ -593,11 +594,11 @@ export default function Game() {
             if (player.velocityY > 0 && player.y + player.height < enemy.y + 30) {
               enemy.alive = false;
               player.velocityY = JUMP_FORCE / 2;
-              setScore(s => s + 800);
+              setScore(s => s + pointsForEvent('hovermiteDefeat'));
               soundController.playStomp();
             } else if (player.starTimer > 0) {
               enemy.alive = false;
-              setScore(s => s + 800);
+              setScore(s => s + pointsForEvent('hovermiteDefeat'));
               soundController.playKick();
             }
           }
@@ -665,7 +666,7 @@ export default function Game() {
                 soundController.playKick();
                 if (enemy.hp <= 0) {
                    enemy.alive = false;
-                   setScore(s => s + 5000);
+                   setScore(s => s + pointsForEvent('wardenDefeat'));
                 } else {
                    // Push back?
                    enemy.velocityX = player.x < enemy.x ? 5 : -5;
@@ -694,7 +695,7 @@ export default function Game() {
               if (other !== enemy && other.alive && other.type !== 'signalSnare' && other.type !== 'hovermite') {
                 if (checkCollision(enemy, other)) {
                   other.alive = false;
-                  setScore(s => s + 200);
+                  setScore(s => s + pointsForEvent('creatureDefeat'));
                   soundController.playKick();
                 }
               }
@@ -742,7 +743,7 @@ export default function Game() {
             // Prismite hurts on stomp too (unless star power)
             if (player.starTimer > 0) {
               enemy.alive = false;
-              setScore(s => s + 200);
+              setScore(s => s + pointsForEvent('creatureDefeat'));
               soundController.playKick();
             } else if (!player.isInvincible) {
               if (player.powerUp !== 'small') {
@@ -762,7 +763,6 @@ export default function Game() {
                 enemy.shellVelocity = player.x < enemy.x ? 10 : -10;
                 soundController.playKick();
                 player.velocityY = JUMP_FORCE / 2;
-                setScore(s => s + 100);
               } else {
                 // Turn into shell
                 enemy.isShell = true;
@@ -770,7 +770,7 @@ export default function Game() {
                 enemy.velocityX = 0;
                 soundController.playStomp();
                 player.velocityY = JUMP_FORCE / 2;
-                setScore(s => s + 100);
+                setScore(s => s + pointsForEvent('rollpodStompShell'));
               }
             } else if (enemy.isShell && enemy.shellVelocity === 0) {
               // Kick stationary shell
@@ -778,7 +778,7 @@ export default function Game() {
               soundController.playKick();
             } else if (player.starTimer > 0) {
               enemy.alive = false;
-              setScore(s => s + 200);
+              setScore(s => s + pointsForEvent('creatureDefeat'));
               soundController.playKick();
             } else if (!player.isInvincible && enemy.shellVelocity !== 0) {
               // Moving shell hurts
@@ -797,11 +797,11 @@ export default function Game() {
             if (isStomp(player, enemy)) {
               enemy.alive = false;
               player.velocityY = JUMP_FORCE / 2;
-              setScore(s => s + 200);
+              setScore(s => s + pointsForEvent('creatureDefeat'));
               soundController.playStomp();
             } else if (player.starTimer > 0) {
               enemy.alive = false;
-              setScore(s => s + 200);
+              setScore(s => s + pointsForEvent('creatureDefeat'));
               soundController.playKick();
             } else if (!player.isInvincible) {
               if (player.powerUp !== 'small') {
@@ -825,6 +825,7 @@ export default function Game() {
     // Flag (win condition)
     if (world.flag && checkCollision(player, beaconFinishBounds(world.flag))) {
       runEndedRef.current = true;
+      setScore(s => s + pointsForEvent('sectorClear'));
       soundController.playStageClear();
       if (hasNextLevel(level)) {
         // Next level
