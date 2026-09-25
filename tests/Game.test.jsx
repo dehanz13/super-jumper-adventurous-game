@@ -238,6 +238,21 @@ describe('game entry and first frame', () => {
     expect(screen.getByText('SHARDS').parentElement.textContent).toBe('SHARDS✦×00');
   });
 
+  it('awards a sector clear once when reaching the beacon', () => {
+    const canvas = openEditor();
+    paint(canvas, 'Beacon', 128, 320);
+    fireEvent.click(screen.getByRole('button', { name: /test/i }));
+
+    stepFrames(4);
+    expect(screen.getByText('COURSE CLEAR!')).toBeInTheDocument();
+    expect(screen.getByText('SCORE: 001000')).toBeInTheDocument();
+    expect(soundController.playStageClear).toHaveBeenCalledTimes(1);
+
+    stepFrames(4);
+    expect(screen.getByText('SCORE: 001000')).toBeInTheDocument();
+    expect(soundController.playStageClear).toHaveBeenCalledTimes(1);
+  });
+
   it('releases a power-up by hitting a question block', () => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getBoundingClientRect').mockReturnValue({
       left: 0, top: 0, width: 800, height: 600,

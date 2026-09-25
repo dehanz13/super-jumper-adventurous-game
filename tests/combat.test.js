@@ -7,6 +7,7 @@ describe('plasma projectile outcomes', () => {
 
     expect(resolvePlasmaHit(enemy)).toEqual({ points: 200, sound: 'playKick' });
     expect(enemy).toMatchObject({ alive: true, isShell: true, height: 32, velocityX: 0 });
+    expect(resolvePlasmaHit(enemy)).toEqual({ points: 0, sound: 'playKick' });
   });
 
   it('requires multiple hits to disable a warden', () => {
