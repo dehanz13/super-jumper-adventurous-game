@@ -86,14 +86,14 @@ describe('game entry and first frame', () => {
 
     act(() => vi.advanceTimersByTime(4500));
 
-    expect(screen.getByText('SELECT SECTOR')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '1-1' })).toBeInTheDocument();
+    expect(screen.getByText('STARTS IN SECTOR 1')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /press start/i })).toBeInTheDocument();
   });
 
   it('opens a selected world and accepts keyboard movement', () => {
     render(<Game />);
     fireEvent.click(screen.getByText(/skip/i));
-    fireEvent.click(screen.getByRole('button', { name: '1-1' }));
+    fireEvent.click(screen.getByRole('button', { name: /press start/i }));
 
     expect(screen.getByText('SECTOR')).toBeInTheDocument();
     fireEvent.keyDown(window, { code: 'ArrowRight' });
@@ -112,17 +112,17 @@ describe('game entry and first frame', () => {
     expect(stroke).toHaveBeenCalled();
   });
 
-  it.each([1, 2, 3])('renders movement through world %i', (world) => {
+  it('starts the first sector and renders movement', () => {
     render(<Game />);
     fireEvent.click(screen.getByText(/skip/i));
-    fireEvent.click(screen.getByRole('button', { name: `${world}-1` }));
+    fireEvent.click(screen.getByRole('button', { name: /press start/i }));
 
     fireEvent.keyDown(window, { code: 'ArrowRight' });
     stepFrames(40);
     fireEvent.keyUp(window, { code: 'ArrowRight' });
     stepFrames(2);
 
-    expect(screen.getByText(`${world}-1`)).toBeInTheDocument();
+    expect(screen.getByText('1-1')).toBeInTheDocument();
   });
 
   it('paints an editor level, saves it, and starts a test run', () => {
@@ -156,7 +156,7 @@ describe('game entry and first frame', () => {
   it('jumps, pauses, resumes, mutes, and restarts a run', () => {
     render(<Game />);
     fireEvent.click(screen.getByText(/skip/i));
-    fireEvent.click(screen.getByRole('button', { name: '1-1' }));
+    fireEvent.click(screen.getByRole('button', { name: /press start/i }));
     stepFrames(30);
 
     fireEvent.keyDown(window, { code: 'ArrowRight' });
@@ -424,7 +424,7 @@ describe('game entry and first frame', () => {
   it('accepts touch movement and jump controls', () => {
     render(<Game />);
     fireEvent.click(screen.getByText(/skip/i));
-    fireEvent.click(screen.getByRole('button', { name: '1-1' }));
+    fireEvent.click(screen.getByRole('button', { name: /press start/i }));
     stepFrames(30);
 
     const right = screen.getByRole('button', { name: 'Move Right' });

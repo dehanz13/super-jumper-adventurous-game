@@ -3,17 +3,18 @@ import { describe, expect, it, vi } from 'vitest';
 import { GameOverScreen, StartScreen, WinScreen } from '../src/components/GameScreens';
 
 describe('game screens', () => {
-  it('starts the selected world and opens the level editor', () => {
+  it('starts a new run and opens the level editor', () => {
     const onStart = vi.fn();
     const onEnterEditor = vi.fn();
     render(<StartScreen onStart={onStart} onEnterEditor={onEnterEditor} />);
 
     fireEvent.click(screen.getByText(/press start/i));
-    fireEvent.click(screen.getByRole('button', { name: '2-1' }));
     fireEvent.click(screen.getByRole('button', { name: /level creator/i }));
 
-    expect(onStart).toHaveBeenCalledWith(1);
-    expect(onStart).toHaveBeenCalledWith(2);
+    expect(onStart).toHaveBeenCalledOnce();
+    expect(onStart).toHaveBeenCalledWith();
+    expect(screen.getByText('STARTS IN SECTOR 1')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '2-1' })).not.toBeInTheDocument();
     expect(onEnterEditor).toHaveBeenCalledOnce();
   });
 
