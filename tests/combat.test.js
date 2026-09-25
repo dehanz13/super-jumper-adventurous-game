@@ -5,23 +5,23 @@ describe('plasma projectile outcomes', () => {
   it('retracts a rollpod without removing it', () => {
     const enemy = { type: 'rollpod', alive: true, height: 48, velocityX: -2, isShell: false };
 
-    expect(resolvePlasmaHit(enemy)).toEqual({ points: 200, sound: 'playKick' });
+    expect(resolvePlasmaHit(enemy)).toEqual({ scoreEvent: 'rollpodPlasmaShell', sound: 'playKick' });
     expect(enemy).toMatchObject({ alive: true, isShell: true, height: 32, velocityX: 0 });
-    expect(resolvePlasmaHit(enemy)).toEqual({ points: 0, sound: 'playKick' });
+    expect(resolvePlasmaHit(enemy)).toEqual({ sound: 'playKick' });
   });
 
   it('requires multiple hits to disable a warden', () => {
     const enemy = { type: 'warden', alive: true, hp: 2, hitTimer: 0 };
 
-    expect(resolvePlasmaHit(enemy)).toEqual({ points: 0, sound: 'playKick' });
+    expect(resolvePlasmaHit(enemy)).toEqual({ sound: 'playKick' });
     expect(enemy).toMatchObject({ alive: true, hp: 1, hitTimer: 10 });
-    expect(resolvePlasmaHit(enemy)).toEqual({ points: 5000, sound: 'playKick' });
+    expect(resolvePlasmaHit(enemy)).toEqual({ scoreEvent: 'wardenDefeat', sound: 'playKick' });
     expect(enemy).toMatchObject({ alive: false, hp: 0 });
   });
 
   it('removes an ordinary creature and ignores protected targets', () => {
     const pebblit = { type: 'pebblit', alive: true };
-    expect(resolvePlasmaHit(pebblit)).toEqual({ points: 200, sound: 'playKick' });
+    expect(resolvePlasmaHit(pebblit)).toEqual({ scoreEvent: 'creatureDefeat', sound: 'playKick' });
     expect(pebblit.alive).toBe(false);
     expect(resolvePlasmaHit(pebblit)).toBeNull();
 
@@ -55,17 +55,17 @@ describe('player contact outcomes', () => {
   it('awards a stomp bounce once and lets shielded contact defeat a creature', () => {
     const explorer = player({ y: 0, velocityY: 6 });
     const pebblit = enemy('pebblit');
-    expect(resolvePlayerEnemyContact(explorer, pebblit)).toEqual({ points: 200, sound: 'playStomp' });
+    expect(resolvePlayerEnemyContact(explorer, pebblit)).toEqual({ scoreEvent: 'creatureDefeat', sound: 'playStomp' });
     expect(explorer.velocityY).toBeLessThan(0);
     expect(resolvePlayerEnemyContact(explorer, pebblit)).toBeNull();
     expect(resolvePlayerEnemyContact(player({ starTimer: 5 }), enemy('prismite')))
-      .toEqual({ points: 200, sound: 'playKick' });
+      .toEqual({ scoreEvent: 'creatureDefeat', sound: 'playKick' });
   });
 
   it('handles Rollpod shell transitions, kicks, and moving shell damage', () => {
     const explorer = player({ y: 0, velocityY: 6 });
     const rollpod = enemy('rollpod', { height: 48, isShell: false });
-    expect(resolvePlayerEnemyContact(explorer, rollpod)).toEqual({ points: 100, sound: 'playStomp' });
+    expect(resolvePlayerEnemyContact(explorer, rollpod)).toEqual({ scoreEvent: 'rollpodStompShell', sound: 'playStomp' });
     expect(rollpod).toMatchObject({ isShell: true, height: 32, velocityX: 0 });
     explorer.velocityY = 6;
     expect(resolvePlayerEnemyContact(explorer, rollpod)).toEqual({ sound: 'playKick' });
@@ -83,15 +83,15 @@ describe('player contact outcomes', () => {
     expect(warden).toMatchObject({ hp: 1, hitTimer: 10, velocityX: 5 });
     expect(resolvePlayerEnemyContact(explorer, warden)).toBeNull();
     warden.hitTimer = 0;
-    expect(resolvePlayerEnemyContact(explorer, warden)).toEqual({ points: 5000, sound: 'playKick' });
+    expect(resolvePlayerEnemyContact(explorer, warden)).toEqual({ scoreEvent: 'wardenDefeat', sound: 'playKick' });
     expect(warden.alive).toBe(false);
   });
 
   it('damages on side contact with Hovermite and defeats it by stomp or shield', () => {
     expect(resolvePlayerEnemyContact(player(), enemy('hovermite'))).toEqual({ loseLife: true });
     expect(resolvePlayerEnemyContact(player({ velocityY: 5, y: 0 }), enemy('hovermite')))
-      .toEqual({ points: 800, sound: 'playStomp' });
+      .toEqual({ scoreEvent: 'hovermiteDefeat', sound: 'playStomp' });
     expect(resolvePlayerEnemyContact(player({ starTimer: 1 }), enemy('hovermite')))
-      .toEqual({ points: 800, sound: 'playKick' });
+      .toEqual({ scoreEvent: 'hovermiteDefeat', sound: 'playKick' });
   });
 });

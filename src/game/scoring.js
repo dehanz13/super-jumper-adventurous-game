@@ -1,4 +1,5 @@
 // Values live here so a future score review can change awards without editing collision rules.
+export const SCORING_VERSION = 1;
 export const SCORE_AWARDS = Object.freeze({
   blockShard: 200,
   shard: 100,

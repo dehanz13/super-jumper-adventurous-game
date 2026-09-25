@@ -1,4 +1,3 @@
-import { pointsForEvent } from './scoring';
 import { JUMP_FORCE } from './playerPhysics';
 import { isStomp } from './geometry';
 
@@ -14,7 +13,9 @@ export function resolvePlasmaHit(enemy) {
     enemy.isShell = true;
     enemy.height = 32;
     enemy.velocityX = 0;
-    return { points: alreadyShelled ? 0 : pointsForEvent('rollpodPlasmaShell'), sound: 'playKick' };
+    return alreadyShelled
+      ? { sound: 'playKick' }
+      : { scoreEvent: 'rollpodPlasmaShell', sound: 'playKick' };
   }
 
   if (enemy.type === 'warden') {
@@ -22,13 +23,13 @@ export function resolvePlasmaHit(enemy) {
     enemy.hitTimer = 10;
     if (enemy.hp <= 0) {
       enemy.alive = false;
-      return { points: pointsForEvent('wardenDefeat'), sound: 'playKick' };
+      return { scoreEvent: 'wardenDefeat', sound: 'playKick' };
     }
-    return { points: 0, sound: 'playKick' };
+    return { sound: 'playKick' };
   }
 
   enemy.alive = false;
-  return { points: pointsForEvent('creatureDefeat'), sound: 'playKick' };
+  return { scoreEvent: 'creatureDefeat', sound: 'playKick' };
 }
 
 export function resolvePlayerDamage(player) {
@@ -47,7 +48,7 @@ export function resolvePlayerEnemyContact(player, enemy) {
   if (!enemy.alive) return null;
   const defeat = (event, sound = 'playKick') => {
     enemy.alive = false;
-    return { points: pointsForEvent(event), sound };
+    return { scoreEvent: event, sound };
   };
   const bounce = () => { player.velocityY = JUMP_FORCE / 2; };
 
@@ -85,7 +86,7 @@ export function resolvePlayerEnemyContact(player, enemy) {
       enemy.isShell = true;
       enemy.height = 32;
       enemy.velocityX = 0;
-      return { points: pointsForEvent('rollpodStompShell'), sound: 'playStomp' };
+      return { scoreEvent: 'rollpodStompShell', sound: 'playStomp' };
     }
     if (enemy.isShell && enemy.shellVelocity === 0) {
       enemy.shellVelocity = player.facingRight ? 10 : -10;

@@ -1,6 +1,5 @@
 import { beaconFinishBounds, rectanglesOverlap } from './geometry';
 import { hasNextLevel } from './levels';
-import { pointsForEvent } from './scoring';
 
 const RESPAWN = Object.freeze({ x: 100, y: 300, invincibleSteps: 90 });
 
@@ -36,7 +35,7 @@ export function resolveCourseClear(player, flag, level, runEnded) {
   return {
     state: advances ? 'levelcomplete' : 'win',
     nextLevel: advances ? level + 1 : null,
-    points: pointsForEvent('sectorClear'),
+    scoreEvent: 'sectorClear',
     sound: 'playStageClear',
   };
 }
