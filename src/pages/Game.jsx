@@ -928,6 +928,8 @@ export default function Game() {
     };
   }, [gameState, gameLoop]);
 
+  useEffect(() => () => soundController.stopBGM(), []);
+
   // Editor Mouse Handling
   const mouseRef = useRef(null);
 
