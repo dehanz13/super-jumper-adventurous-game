@@ -23,7 +23,7 @@ Visible contact bounds and editor creature sizes live in `src/game/geometry.js`.
 
 Gameplay advances at a fixed 60 simulation steps per second through `src/game/fixedStep.js`; drawing may run at the display's refresh rate. Slow frames can run a bounded number of catch-up steps, and a paused tab does not replay its entire absence. A lost life gives the explorer a brief invincibility window after respawn.
 
-`src/game/input.js` turns keyboard and touch key states into one gameplay input snapshot. `src/game/playerPhysics.js` applies that snapshot to player movement and platform contact without depending on React or Canvas. Other world rules still live in the page and must be extracted before server replay can validate public scores.
+`src/game/input.js` turns keyboard and touch key states into one gameplay input snapshot. `src/game/playerPhysics.js` applies that snapshot to player movement and platform contact without depending on React or Canvas. `src/game/collectibles.js` resolves block hits, shards, and power-up pickups as named outcomes. Enemy and other world rules still live in the page and must be extracted before server replay can validate public scores.
 
 The current soundtrack has three looping, code-generated tracks in `src/game/audioTracks.js`, one for each playable level. Gameplay requests named effects through `SoundController`, so future recorded music and effects can replace the sound implementation without changing game rules. Audio starts after the player presses Start, in line with browser audio permissions; pause, level clear, and game over stop the current music loop.
 

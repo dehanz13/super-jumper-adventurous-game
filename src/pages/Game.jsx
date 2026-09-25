@@ -6,8 +6,9 @@ import { GameOverScreen, WinScreen, StartScreen } from '@/components/GameScreens
 import IntroScreen from '@/components/IntroScreen';
 import { drawCreature, drawExplorer } from '@/game/characterArt';
 import { PLASMA_COOLDOWN_STEPS, WARDEN_JUMP_INTERVAL_STEPS, resolvePlasmaHit } from '@/game/combat';
+import { collectShards, resolveBlockHit, stepPowerUps } from '@/game/collectibles';
 import { drawBeacon, drawPickup, drawSpaceBackdrop, drawStarShard, drawTerrain } from '@/game/worldArt';
-import { alignGroundEnemy, beaconFinishBounds, createEditorCreature, creatureHurtbox, isStomp, playerHurtbox } from '@/game/geometry';
+import { alignGroundEnemy, beaconFinishBounds, createEditorCreature, creatureHurtbox, isStomp, playerHurtbox, rectanglesOverlap as checkCollision } from '@/game/geometry';
 import { DIRECTION_KEYS, directionAtPoint, readGameplayInput } from '@/game/input';
 import { getLevelData, hasNextLevel } from '@/game/levels';
 import { takeFixedSteps } from '@/game/fixedStep';
@@ -186,13 +187,6 @@ export default function Game() {
     ctx.restore();
   };
 
-  const checkCollision = (rect1, rect2) => {
-    return rect1.x < rect2.x + rect2.width &&
-           rect1.x + rect1.width > rect2.x &&
-           rect1.y < rect2.y + rect2.height &&
-           rect1.y + rect1.height > rect2.y;
-  };
-
   const loseLife = useCallback(() => {
     if (runEndedRef.current) return;
     const remaining = livesRef.current - 1;
@@ -285,55 +279,29 @@ export default function Game() {
     if (movement.jumped) soundController.playJump();
     movement.headHits.forEach(index => {
       const platform = world.platforms[index];
-      if (platform.type === 'question') {
-        if (!platform.isUsed) {
-          platform.isUsed = true;
-          platform.bounceY = -10;
-
-          const foundPowerUp = world.powerUps.find(p =>
-            !p.spawned &&
-            p.x >= platform.x && p.x < platform.x + platform.width &&
-            p.y <= platform.y && p.y >= platform.y - 50
-          );
-
-          if (foundPowerUp) {
-            foundPowerUp.spawned = true;
-            foundPowerUp.velocityY = -8;
-            foundPowerUp.y = platform.y - 30;
-            soundController.playPowerUp();
-          } else {
-            world.effects.push({
-              x: platform.x + platform.width / 2,
-              y: platform.y,
-              type: 'coin_pop',
-              frame: 0,
-            });
-            setScore(s => s + pointsForEvent('blockShard'));
-            soundController.playCoin();
-          }
-        } else {
-          soundController.playBump();
-        }
-      } else if (platform.type === 'brick') {
-        platform.bounceY = -5;
+      const outcome = resolveBlockHit(platform, world.powerUps);
+      if (outcome?.kind === 'powerUpReleased') {
+        platform.bounceY = -10;
+        soundController.playPowerUp();
+      } else if (outcome?.kind === 'shardReleased') {
+        platform.bounceY = -10;
+        world.effects.push(outcome.effect);
+        setScore(s => s + pointsForEvent('blockShard'));
+        soundController.playCoin();
+      } else if (outcome?.kind === 'brickBump' || outcome?.kind === 'usedBump') {
+        if (outcome.kind === 'brickBump') platform.bounceY = -5;
         soundController.playBump();
       }
     });
 
     if (movement.landed) soundController.playLand();
 
-    // Coin collection
-    world.coins.forEach(coin => {
-      if (!coin.collected) {
-        const coinRect = { x: coin.x - 12, y: coin.y - 15, width: 24, height: 30 };
-        if (checkCollision(player, coinRect)) {
-          coin.collected = true;
-          setShards(count => count + 1);
-          setScore(s => s + pointsForEvent('shard'));
-          soundController.playCoin();
-        }
-      }
-    });
+    const collectedShards = collectShards(world.coins, player);
+    if (collectedShards) {
+      setShards(count => count + collectedShards);
+      setScore(s => s + collectedShards * pointsForEvent('shard'));
+      for (let i = 0; i < collectedShards; i++) soundController.playCoin();
+    }
 
     // Update Effects (visual coins, etc)
     if (world.effects) {
@@ -351,54 +319,11 @@ export default function Game() {
         }
     });
 
-    // Power-up movement and collection
-    world.powerUps.forEach(powerUp => {
-      if (!powerUp.collected && powerUp.spawned) {
-        // Moving pickups drift and bounce until collected.
-        if (powerUp.type === 'powerCell' || powerUp.type === 'spectrum') {
-          powerUp.x += powerUp.velocityX || 0;
-          powerUp.velocityY = (powerUp.velocityY || 0) + GRAVITY;
-          powerUp.y += powerUp.velocityY;
-
-          // Platform collision for power-ups
-          world.platforms.forEach(platform => {
-            const puRect = { x: powerUp.x, y: powerUp.y, width: 30, height: 28 };
-            if (checkCollision(puRect, platform)) {
-              if (powerUp.velocityY > 0) {
-                powerUp.y = platform.y - 28;
-                powerUp.velocityY = powerUp.type === 'spectrum' ? -8 : 0; // Stars bounce
-              }
-            }
-          });
-
-          // Reverse at edges
-          if (powerUp.x < 0 || powerUp.y > 700) {
-            powerUp.collected = true;
-          }
-        }
-
-        // Collection
-        const puRect = { x: powerUp.x, y: powerUp.y, width: 30, height: 28 };
-        if (checkCollision(player, puRect)) {
-          powerUp.collected = true;
-          setScore(s => s + pointsForEvent('powerUp'));
-          soundController.playPowerUp();
-
-          if (powerUp.type === 'powerCell') {
-            if (player.powerUp === 'small') {
-              player.powerUp = 'big';
-              player.height = 65;
-            }
-          } else if (powerUp.type === 'plasma') {
-            player.powerUp = 'plasma';
-            player.height = 65;
-          } else if (powerUp.type === 'spectrum') {
-            player.starTimer = 600; // ~10 seconds at 60fps
-            player.isInvincible = true;
-          }
-        }
-      }
-    });
+    const collectedPowerUps = stepPowerUps(world.powerUps, world.platforms, player);
+    if (collectedPowerUps.length) {
+      setScore(s => s + collectedPowerUps.length * pointsForEvent('powerUp'));
+      collectedPowerUps.forEach(() => soundController.playPowerUp());
+    }
 
     // Update star timer
     if (player.starTimer > 0) {
