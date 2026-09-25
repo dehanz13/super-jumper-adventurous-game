@@ -7,7 +7,7 @@ export function resolvePlasmaHit(enemy) {
     enemy.isShell = true;
     enemy.height = 32;
     enemy.velocityX = 0;
-    return { points: 200, sound: null };
+    return { points: 200, sound: 'playKick' };
   }
 
   if (enemy.type === 'warden') {
@@ -15,11 +15,11 @@ export function resolvePlasmaHit(enemy) {
     enemy.hitTimer = 10;
     if (enemy.hp <= 0) {
       enemy.alive = false;
-      return { points: 5000, sound: 'playStageClear' };
+      return { points: 5000, sound: 'playKick' };
     }
     return { points: 0, sound: 'playKick' };
   }
 
   enemy.alive = false;
-  return { points: 200, sound: null };
+  return { points: 200, sound: 'playKick' };
 }
