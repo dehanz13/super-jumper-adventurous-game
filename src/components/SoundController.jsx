@@ -1,3 +1,5 @@
+import { AUDIO_TRACKS } from '@/game/audioTracks';
+
 class SoundController {
   constructor() {
     this.ctx = null;
@@ -48,6 +50,22 @@ class SoundController {
     gain.connect(this.masterGain);
     osc.start();
     osc.stop(this.ctx.currentTime + 0.1);
+  }
+
+  playLand() {
+    if (!this.ctx || this.isMuted) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(125, t);
+    osc.frequency.linearRampToValueAtTime(75, t + 0.06);
+    gain.gain.setValueAtTime(0.12, t);
+    gain.gain.linearRampToValueAtTime(0, t + 0.06);
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start();
+    osc.stop(t + 0.06);
   }
 
   playCoin() {
@@ -103,15 +121,9 @@ class SoundController {
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = 'square';
-    // Arpeggio
     [0, 0.1, 0.2, 0.3, 0.4, 0.5].forEach((delay, i) => {
-       setTimeout(() => {
-           if(this.isMuted) return;
-           osc.frequency.setValueAtTime(440 + i * 100, this.ctx.currentTime);
-       }, delay * 1000);
+      osc.frequency.setValueAtTime(440 + i * 100, t + delay);
     });
-    osc.frequency.setValueAtTime(440, t);
-    osc.frequency.linearRampToValueAtTime(880, t + 0.5);
     gain.gain.setValueAtTime(0.2, t);
     gain.gain.linearRampToValueAtTime(0, t + 0.6);
     osc.connect(gain);
@@ -150,9 +162,41 @@ class SoundController {
     osc.stop(this.ctx.currentTime + 0.1);
   }
 
-  playDie() {
+  playDamage() {
     if (!this.ctx || this.isMuted) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(330, t);
+    osc.frequency.linearRampToValueAtTime(180, t + 0.16);
+    gain.gain.setValueAtTime(0.25, t);
+    gain.gain.linearRampToValueAtTime(0, t + 0.16);
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start();
+    osc.stop(t + 0.16);
+  }
+
+  playSelect() {
+    if (!this.ctx || this.isMuted) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(440, t);
+    osc.frequency.linearRampToValueAtTime(660, t + 0.08);
+    gain.gain.setValueAtTime(0.16, t);
+    gain.gain.linearRampToValueAtTime(0, t + 0.08);
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start();
+    osc.stop(t + 0.08);
+  }
+
+  playDie() {
     this.stopBGM();
+    if (!this.ctx || this.isMuted) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
@@ -174,8 +218,8 @@ class SoundController {
   }
 
   playStageClear() {
-    if (!this.ctx || this.isMuted) return;
     this.stopBGM();
+    if (!this.ctx || this.isMuted) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
@@ -202,6 +246,7 @@ class SoundController {
 
   stopBGM() {
     this.isPlaying = false;
+    this.currentBgm = null;
     clearTimeout(this.bgmTimer);
     this.bgmOscillators.forEach(o => {
         try { o.stop(); o.disconnect(); } catch {}
@@ -210,49 +255,25 @@ class SoundController {
   }
 
   playBGM(levelType) {
-    if (this.isMuted || !this.ctx) return;
+    if (!this.ctx) return;
     this.stopBGM();
     this.isPlaying = true;
-
-    // Note frequencies
-    const D3 = 146.83, F3 = 174.61, A3 = 220.00;
-    const D4 = 293.66, F4 = 349.23, G4 = 392.00, A4 = 440.00;
-    const C5 = 523.25, D5 = 587.33, F5 = 698.46;
-
-    if (levelType === 2) { // Caverns
-        this.tempo = 112;
-        this.song = [
-            {f: D3, d: 0.3}, {f: null, d: 0.1}, {f: F3, d: 0.15},
-            {f: A3, d: 0.3}, {f: F3, d: 0.15}, {f: D3, d: 0.4},
-            {f: null, d: 0.2}
-        ];
-    } else if (levelType === 3) { // High canopies
-        this.tempo = 132;
-        this.song = [
-            {f: F5, d: 0.25}, {f: D5, d: 0.15}, {f: A4, d: 0.35},
-            {f: null, d: 0.1}, {f: C5, d: 0.2}, {f: G4, d: 0.25},
-            {f: D5, d: 0.4}, {f: null, d: 0.2}
-        ];
-    } else { // Meadow route
-        this.tempo = 156;
-        this.song = [
-            {f: D4, d: 0.25}, {f: F4, d: 0.15}, {f: A4, d: 0.35},
-            {f: null, d: 0.1}, {f: G4, d: 0.2}, {f: F4, d: 0.2},
-            {f: C5, d: 0.3}, {f: A4, d: 0.4}, {f: null, d: 0.15}
-        ];
-    }
+    this.currentBgm = levelType;
+    const track = AUDIO_TRACKS[levelType] || AUDIO_TRACKS[1];
+    this.tempo = track.tempo;
+    this.song = track.notes;
 
     this.noteIndex = 0;
     this.scheduleNote();
   }
 
   scheduleNote() {
-    if (!this.isPlaying || !this.ctx || this.isMuted) return;
+    if (!this.isPlaying || !this.ctx) return;
 
     const note = this.song[this.noteIndex];
     const nextNoteIndex = (this.noteIndex + 1) % this.song.length;
 
-    if (note.f) {
+    if (note.f && !this.isMuted) {
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { alignGroundEnemy, playerSpriteBounds } from '../src/game/geometry';
+import { alignGroundEnemy, createEditorCreature, creatureHurtbox, isStomp, playerHurtbox, playerSpriteBounds } from '../src/game/geometry';
 
 describe('player sprite bounds', () => {
   it.each([
@@ -31,5 +31,46 @@ describe('ground enemy placement', () => {
     const gap = { type: 'pebblit', x: 1200, y: 455, width: 40, height: 40 };
     expect(alignGroundEnemy(cloud, platforms)).toBe(cloud);
     expect(alignGroundEnemy(gap, platforms)).toBe(gap);
+  });
+});
+
+describe('visible contact geometry', () => {
+  it('keeps walking contact clear until the explorer and pebblit silhouettes meet', () => {
+    const player = { x: 100, y: 450, width: 40, height: 50, powerUp: 'small' };
+    const body = playerHurtbox(player);
+    const separate = creatureHurtbox({ type: 'pebblit', x: 128, y: 460, width: 40, height: 40 });
+    const touching = creatureHurtbox({ type: 'pebblit', x: 127, y: 460, width: 40, height: 40 });
+
+    expect(body).toEqual({ x: 109, y: 478, width: 22, height: 22 });
+    expect(body.x + body.width).toBeLessThanOrEqual(separate.x);
+    expect(body.x + body.width).toBeGreaterThan(touching.x);
+    expect(body.y + body.height).toBe(500);
+  });
+
+  it('follows the visible creature shapes and their current state', () => {
+    const rollpod = { type: 'rollpod', x: 200, y: 452, width: 40, height: 48 };
+    expect(creatureHurtbox(rollpod)).toEqual({ x: 202, y: 463, width: 36, height: 37 });
+    expect(creatureHurtbox({ ...rollpod, y: 468, height: 32, isShell: true }))
+      .toEqual({ x: 202, y: 463, width: 36, height: 37 });
+    const unknown = { type: 'newCreature', x: 1, y: 2, width: 3, height: 4 };
+    expect(creatureHurtbox(unknown)).toBe(unknown);
+  });
+
+  it('recognizes a descending contact above a creature midpoint', () => {
+    const creature = { type: 'pebblit', x: 100, y: 460, width: 40, height: 40 };
+    const player = { y: 428, height: 50, velocityY: 7 };
+    expect(isStomp(player, creature)).toBe(true);
+    expect(isStomp({ ...player, velocityY: -7 }, creature)).toBe(false);
+    expect(isStomp({ ...player, y: 450 }, creature)).toBe(false);
+  });
+
+  it('gives editor creatures their drawn dimensions with feet on the selected cell', () => {
+    expect(createEditorCreature('pebblit', 128, 320))
+      .toMatchObject({ x: 128, y: 312, width: 40, height: 40 });
+    expect(createEditorCreature('rollpod', 128, 320))
+      .toMatchObject({ x: 128, y: 304, width: 40, height: 48, isShell: false });
+    expect(createEditorCreature('warden', 128, 320))
+      .toMatchObject({ x: 128, y: 288, width: 64, height: 64, hp: 5 });
+    expect(() => createEditorCreature('unknown', 0, 0)).toThrow(RangeError);
   });
 });
