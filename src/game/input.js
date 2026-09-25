@@ -1,5 +1,14 @@
 export const DIRECTION_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
 
+export function readGameplayInput(keys) {
+  return {
+    left: Boolean(keys.ArrowLeft || keys.KeyA),
+    right: Boolean(keys.ArrowRight || keys.KeyD),
+    jump: Boolean(keys.ArrowUp || keys.KeyW || keys.Space),
+    fire: Boolean(keys.KeyX || keys.KeyZ),
+  };
+}
+
 export function directionAtPoint(rect, clientX, clientY) {
   const dx = clientX - (rect.left + rect.width / 2);
   const dy = clientY - (rect.top + rect.height / 2);
