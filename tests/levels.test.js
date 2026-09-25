@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { getLevelData, hasNextLevel } from '../src/game/levels';
+import { createHash } from 'node:crypto';
+import { getLevelData, hasNextLevel, LEVEL_SET_VERSION } from '../src/game/levels';
 import { alignGroundEnemy } from '../src/game/geometry';
 
 describe('playable level registry', () => {
+  it('pins the authored maps to a content version for replay', () => {
+    const maps = [1, 2, 3].map(getLevelData);
+    const digest = createHash('sha256').update(JSON.stringify(maps)).digest('hex');
+    expect(LEVEL_SET_VERSION).toBe(`sha256:${digest}`);
+    expect(Object.isFrozen(maps[0])).toBe(true);
+    expect(Object.isFrozen(maps[0].platforms[0])).toBe(true);
+  });
   it('loads the three current sectors in order', () => {
     expect([1, 2, 3].map(number => getLevelData(number).name))
       .toEqual(['Launch Fields', 'Crystal Caverns', 'Orbital Spires']);

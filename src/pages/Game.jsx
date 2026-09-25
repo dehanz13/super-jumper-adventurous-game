@@ -10,14 +10,14 @@ import { stepEnemyProjectile, stepPlayerPlasma, tryFirePlasma } from '@/game/pro
 import { isSignalSnareActive, stepEnemyMotion } from '@/game/enemyMotion';
 import { collectShards, resolveBlockHit, stepPowerUps } from '@/game/collectibles';
 import { drawBeacon, drawPickup, drawSpaceBackdrop, drawStarShard, drawTerrain } from '@/game/worldArt';
-import { alignGroundEnemy, createEditorCreature, creatureHurtbox, playerHurtbox, rectanglesOverlap as checkCollision } from '@/game/geometry';
+import { createEditorCreature, creatureHurtbox, playerHurtbox, rectanglesOverlap as checkCollision } from '@/game/geometry';
 import { DIRECTION_KEYS, directionAtPoint, readGameplayInput } from '@/game/input';
 import { appendInputStep, createInputTranscript, sealInputTranscript } from '@/game/inputTranscript';
-import { getLevelData } from '@/game/levels';
 import { takeFixedSteps } from '@/game/fixedStep';
 import { stepPlayerPhysics } from '@/game/playerPhysics';
 import { resolveCourseClear, resolveLifeLoss } from '@/game/runProgress';
 import { createScoreLedger, recordScoreEvent } from '@/game/scoreLedger';
+import { createEmptyWorldState, createInitialLevelState, createPlayerState } from '@/game/worldState';
 
 export default function Game() {
   const canvasRef = useRef(null);
@@ -51,94 +51,16 @@ export default function Game() {
   const [showGrid, setShowGrid] = useState(true);
   const customLevelRef = useRef(null);
 
-  const playerRef = useRef({
-    x: 100,
-    y: 300,
-    width: 40,
-    height: 50,
-    velocityX: 0,
-    velocityY: 0,
-    onGround: false,
-    facingRight: true,
-    isJumping: false,
-    frame: 0,
-    powerUp: 'small', // small, big, fire
-    isInvincible: false,
-    invincibleTimer: 0,
-    starTimer: 0,
-    fireballCooldown: 0,
-    fireballs: []
-  });
-
-  const worldRef = useRef({
-    offset: 0,
-    platforms: [],
-    coins: [],
-    enemies: [],
-    powerUps: [],
-    enemyProjectiles: [],
-    effects: [],
-    maxOffset: 0,
-    levelName: '',
-    flag: null
-  });
-
+  const playerRef = useRef(createPlayerState());
+  const worldRef = useRef(createEmptyWorldState());
 
   const initLevel = useCallback(
     /** @param {number | 'custom'} levelNum */
     (levelNum = 1) => {
-    runEndedRef.current = false;
-    let levelData;
-    if (levelNum === 'custom') {
-      levelData = customLevelRef.current || {
-        name: "Custom Level",
-        maxOffset: 2000,
-        platforms: [{ x: 0, y: 500, width: 800, height: 100, type: 'ground' }],
-        coins: [],
-        enemies: [],
-        powerUps: [],
-        flag: { x: 1800, y: 200, width: 20, height: 300 }
-      };
-    } else {
-      levelData = getLevelData(levelNum);
-    }
-
-    worldRef.current = {
-      offset: 0,
-      platforms: levelData.platforms.map(p => ({...p, isUsed: false, bounceY: 0})),
-      coins: levelData.coins.map(c => ({...c, collected: false})),
-      enemies: levelData.enemies.map(e => ({...alignGroundEnemy(e, levelData.platforms), alive: true})),
-      powerUps: (levelData.powerUps || []).map(p => ({
-        ...p,
-        collected: false,
-        spawned: levelNum === 'custom' ? Boolean(p.spawned) : false,
-        velocityY: 0
-      })),
-      enemyProjectiles: [],
-      effects: [],
-      flag: {...levelData.flag},
-      maxOffset: levelData.maxOffset,
-      levelName: levelData.name
-    };
-
-    playerRef.current = {
-      x: 100,
-      y: 300,
-      width: 40,
-      height: 50,
-      velocityX: 0,
-      velocityY: 0,
-      onGround: false,
-      facingRight: true,
-      isJumping: false,
-      frame: 0,
-      powerUp: 'small',
-      isInvincible: false,
-      invincibleTimer: 0,
-      starTimer: 0,
-      fireballCooldown: 0,
-      fireballs: []
-    };
+      runEndedRef.current = false;
+      const state = createInitialLevelState(levelNum, customLevelRef.current);
+      playerRef.current = state.player;
+      worldRef.current = state.world;
     }, []);
 
   const drawEffect = (ctx, effect, offset) => {

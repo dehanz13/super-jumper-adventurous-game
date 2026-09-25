@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { STEP_MS, takeFixedSteps } from '../src/game/fixedStep';
+import { LEVEL_SET_VERSION } from '../src/game/levels';
+import { SCORING_VERSION } from '../src/game/scoring';
 import {
   appendInputStep, createInputTranscript, decodeInput, encodeInput,
   isSubmissionCandidate, MAX_INPUT_SEGMENTS, MAX_INPUT_STEPS, replayInputTranscript,
@@ -16,7 +18,8 @@ describe('bounded input transcript', () => {
     expect(encodeInput(moving)).toBe(6);
     expect(decodeInput(6)).toEqual(moving);
     expect(transcript).toEqual({
-      version: 1, mode: 'campaign', steps: 4,
+      version: 2, mode: 'campaign', levelSetVersion: LEVEL_SET_VERSION,
+      scoringVersion: SCORING_VERSION, steps: 4,
       segments: [[0, 1], [6, 2], [0, 1]], truncated: false, endedAs: null,
     });
     expect(validateInputTranscript(transcript)).toBe(true);
@@ -94,6 +97,8 @@ describe('bounded input transcript', () => {
     appendInputStep(transcript, idle);
     expect(() => validateInputTranscript({ ...transcript, steps: 2 })).toThrow('step count mismatch');
     expect(() => validateInputTranscript({ ...transcript, mode: 'unknown' })).toThrow(RangeError);
+    expect(() => validateInputTranscript({ ...transcript, levelSetVersion: 'old-map' })).toThrow(RangeError);
+    expect(() => validateInputTranscript({ ...transcript, scoringVersion: 0 })).toThrow(RangeError);
     expect(() => validateInputTranscript({ ...transcript, endedAs: 'paused' })).toThrow(RangeError);
     expect(() => validateInputTranscript({ ...transcript, segments: [[16, 1]] })).toThrow(RangeError);
     expect(() => validateInputTranscript({ ...transcript, segments: [[0, 1], [0, 1]], steps: 2 })).toThrow('Invalid input segment');
