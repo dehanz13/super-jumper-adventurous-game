@@ -36,11 +36,11 @@ describe('run progress', () => {
   it('awards a course clear once and advances only to an available sector', () => {
     const player = explorer();
     expect(resolveCourseClear(player, beacon, 1, false)).toEqual({
-      state: 'levelcomplete', nextLevel: 2, points: 1000, sound: 'playStageClear',
+      state: 'levelcomplete', nextLevel: 2, scoreEvent: 'sectorClear', sound: 'playStageClear',
     });
     expect(resolveCourseClear(player, beacon, 2, false).nextLevel).toBe(3);
     expect(resolveCourseClear(player, beacon, 3, false)).toEqual({
-      state: 'win', nextLevel: null, points: 1000, sound: 'playStageClear',
+      state: 'win', nextLevel: null, scoreEvent: 'sectorClear', sound: 'playStageClear',
     });
     expect(resolveCourseClear(player, beacon, 3, true)).toBeNull();
   });

@@ -14,9 +14,9 @@ import { alignGroundEnemy, createEditorCreature, creatureHurtbox, playerHurtbox,
 import { DIRECTION_KEYS, directionAtPoint, readGameplayInput } from '@/game/input';
 import { getLevelData } from '@/game/levels';
 import { takeFixedSteps } from '@/game/fixedStep';
-import { pointsForEvent } from '@/game/scoring';
 import { stepPlayerPhysics } from '@/game/playerPhysics';
 import { resolveCourseClear, resolveLifeLoss } from '@/game/runProgress';
+import { createScoreLedger, recordScoreEvent } from '@/game/scoreLedger';
 
 export default function Game() {
   const canvasRef = useRef(null);
@@ -27,6 +27,8 @@ export default function Game() {
   const simulationClockRef = useRef({ lastTimestamp: null, accumulator: 0 });
   const livesRef = useRef(3);
   const runEndedRef = useRef(false);
+  const runStepRef = useRef(0);
+  const scoreLedgerRef = useRef(createScoreLedger());
 
   const [gameState, setGameState] = useState('intro'); // intro, start, playing, paused, gameover, win
   const [introPhase, setIntroPhase] = useState(0);
@@ -35,6 +37,11 @@ export default function Game() {
   const [lives, setLives] = useState(3);
   const [level, setLevel] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
+
+  const recordAward = useCallback((event, count = 1) => {
+    const total = recordScoreEvent(scoreLedgerRef.current, event, count, level, runStepRef.current);
+    setScore(total);
+  }, [level]);
 
   // Editor state
   const [selectedTool, setSelectedTool] = useState('brush'); // brush, eraser, hand
@@ -211,7 +218,7 @@ export default function Game() {
     const world = worldRef.current;
     const applyContactOutcome = outcome => {
       if (!outcome) return;
-      if (outcome.points) setScore(score => score + outcome.points);
+      if (outcome.scoreEvent) recordAward(outcome.scoreEvent);
       if (outcome.sound) soundController[outcome.sound]();
       if (outcome.loseLife) loseLife();
     };
@@ -268,6 +275,7 @@ export default function Game() {
     const stepCount = takeFixedSteps(simulationClockRef.current, timestamp);
     for (let step = 0; step < stepCount; step++) {
     if (runEndedRef.current) break;
+    runStepRef.current++;
 
     const input = readGameplayInput(keysRef.current);
     const movement = stepPlayerPhysics(player, input, world.platforms);
@@ -282,7 +290,7 @@ export default function Game() {
       } else if (outcome?.kind === 'shardReleased') {
         platform.bounceY = -10;
         world.effects.push(outcome.effect);
-        setScore(s => s + pointsForEvent('blockShard'));
+        recordAward('blockShard');
         soundController.playCoin();
       } else if (outcome?.kind === 'brickBump' || outcome?.kind === 'usedBump') {
         if (outcome.kind === 'brickBump') platform.bounceY = -5;
@@ -295,7 +303,7 @@ export default function Game() {
     const collectedShards = collectShards(world.coins, player);
     if (collectedShards) {
       setShards(count => count + collectedShards);
-      setScore(s => s + collectedShards * pointsForEvent('shard'));
+      recordAward('shard', collectedShards);
       for (let i = 0; i < collectedShards; i++) soundController.playCoin();
     }
 
@@ -317,7 +325,7 @@ export default function Game() {
 
     const collectedPowerUps = stepPowerUps(world.powerUps, world.platforms, player);
     if (collectedPowerUps.length) {
-      setScore(s => s + collectedPowerUps.length * pointsForEvent('powerUp'));
+      recordAward('powerUp', collectedPowerUps.length);
       collectedPowerUps.forEach(() => soundController.playPowerUp());
     }
 
@@ -339,7 +347,7 @@ export default function Game() {
 
     if (tryFirePlasma(player, input.fire)) soundController.playFireball();
     stepPlayerPlasma(player, world.platforms, world.enemies, world.offset).forEach(outcome => {
-      if (outcome.points) setScore(score => score + outcome.points);
+      if (outcome.scoreEvent) recordAward(outcome.scoreEvent);
       if (outcome.sound) soundController[outcome.sound]();
     });
 
@@ -359,7 +367,7 @@ export default function Game() {
         soundController.playFireball();
       }
       if (outcome.shellDefeats) {
-        setScore(score => score + outcome.shellDefeats * pointsForEvent('creatureDefeat'));
+        recordAward('creatureDefeat', outcome.shellDefeats);
         for (let i = 0; i < outcome.shellDefeats; i++) soundController.playKick();
       }
 
@@ -384,7 +392,7 @@ export default function Game() {
     const clear = resolveCourseClear(player, world.flag, level, runEndedRef.current);
     if (clear) {
       runEndedRef.current = true;
-      setScore(score => score + clear.points);
+      recordAward(clear.scoreEvent);
       soundController[clear.sound]();
       if (clear.nextLevel) setLevel(clear.nextLevel);
       setGameState(clear.state);
@@ -434,7 +442,7 @@ export default function Game() {
     drawExplorer(ctx, player, world.offset);
 
     gameLoopRef.current = requestAnimationFrame(gameLoop);
-  }, [gameState, level, selectedTool, showGrid, loseLife]);
+  }, [gameState, level, selectedTool, showGrid, loseLife, recordAward]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -598,14 +606,20 @@ export default function Game() {
     }
   }, [gameState]);
 
+  const resetRunScore = mode => {
+    scoreLedgerRef.current = createScoreLedger(mode);
+    runStepRef.current = 0;
+    setScore(0);
+    setShards(0);
+  };
+
   const startGame = () => {
     soundController.init();
     soundController.playSelect();
     soundController.playBGM(1);
     setLevel(1);
     initLevel(1);
-    setScore(0);
-    setShards(0);
+    resetRunScore('campaign');
     setLives(3);
     livesRef.current = 3;
     setGameState('playing');
@@ -696,7 +710,7 @@ export default function Game() {
                 <div className="h-px bg-white/20 my-1" />
                 <Button aria-label="Toggle grid" size="icon" variant={showGrid ? "default" : "ghost"} onClick={() => setShowGrid(!showGrid)} className="h-8 w-8"><Grid className="h-4 w-4" /></Button>
                 <Button aria-label="Save level" size="icon" variant="ghost" onClick={saveCustomLevel} className="h-8 w-8 text-green-400 hover:text-green-300"><Save className="h-4 w-4" /></Button>
-                <Button size="sm" variant="destructive" onClick={() => { saveCustomLevel(); initLevel('custom'); setGameState('playing'); }} className="mt-2 text-xs"><Play className="h-3 w-3 mr-1" /> TEST</Button>
+                <Button size="sm" variant="destructive" onClick={() => { saveCustomLevel(); initLevel('custom'); resetRunScore('custom'); setGameState('playing'); }} className="mt-2 text-xs"><Play className="h-3 w-3 mr-1" /> TEST</Button>
             </div>
         )}
 

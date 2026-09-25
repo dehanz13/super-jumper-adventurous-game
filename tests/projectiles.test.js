@@ -32,7 +32,7 @@ describe('projectile simulation', () => {
     const second = { ...pebblit, x: 114 };
     expect(playerPlasmaBounds(player.fireballs[0])).toEqual({ x: 90, y: 90, width: 20, height: 20 });
     expect(stepPlayerPlasma(player, [], [pebblit, second], 0))
-      .toEqual([{ points: 200, sound: 'playKick' }]);
+      .toEqual([{ scoreEvent: 'creatureDefeat', sound: 'playKick' }]);
     expect(player.fireballs).toHaveLength(0);
     expect(pebblit.alive).toBe(false);
     expect(second.alive).toBe(true);
