@@ -1,5 +1,20 @@
 import { expect, test } from '@playwright/test';
 
+test('intro and start screen honor reduced motion', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+
+  const starfield = page.locator('.animate-scroll-slow');
+  await expect(starfield).toBeVisible();
+  expect(await starfield.evaluate(node => getComputedStyle(node).animationName)).toBe('none');
+  expect(await starfield.evaluate(node => getComputedStyle(node).transitionDuration)).toBe('0s');
+
+  await page.getByText(/skip/i).click();
+  const startButton = page.getByRole('button', { name: /press start/i });
+  await expect(startButton).toBeVisible();
+  expect(await startButton.evaluate(node => getComputedStyle(node).animationName)).toBe('none');
+});
+
 test('a player can start, pause, and resume a world', async ({ page }) => {
   await page.goto('/');
   await page.getByText(/skip/i).click();

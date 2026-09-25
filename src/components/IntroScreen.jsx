@@ -14,7 +14,7 @@ export default function IntroScreen({ introPhase, onSkip }) {
   return (
     <div
       ref={rootRef}
-      className="absolute inset-0 bg-black flex items-center justify-center cursor-pointer overflow-hidden"
+      className="intro-screen absolute inset-0 bg-black flex items-center justify-center cursor-pointer overflow-hidden"
       onClick={(e) => { e.preventDefault(); onSkip(); }}
     >
       {/* Animated starfield and distant planet */}
@@ -99,6 +99,10 @@ export default function IntroScreen({ introPhase, onSkip }) {
         .animate-spin-coin { animation: spin-coin 0.3s linear infinite; }
         .animate-flash { animation: flash 0.3s ease-out forwards; }
         .animate-star-burst { animation: star-burst 0.8s ease-out forwards; }
+        @media (prefers-reduced-motion: reduce) {
+          .intro-screen, .intro-screen * { animation: none !important; transition: none !important; }
+          .intro-screen .animate-flash { display: none; }
+        }
       `}</style>
     </div>
   );

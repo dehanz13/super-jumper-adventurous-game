@@ -64,9 +64,9 @@ export function StartScreen({ onStart, onEnterEditor }) {
         <div className="text-white text-xs sm:text-lg sm:mt-4" style={{ textShadow: '2px 2px 0 #000' }}>A COSMIC ADVENTURE</div>
       </div>
 
-      <button className="start-actions text-white text-base sm:text-xl font-bold mb-2 sm:mb-4 cursor-pointer hover:text-[#F4DB70] transition-colors relative z-10"
+      <button className="start-actions text-white text-base sm:text-xl font-bold mb-2 sm:mb-4 cursor-pointer hover:text-[#F4DB70] transition-colors motion-safe:animate-pulse relative z-10"
         onClick={() => onStart()}
-        style={{ textShadow: '2px 2px 0 #000', animation: 'pulse 1s infinite' }}
+        style={{ textShadow: '2px 2px 0 #000' }}
       >
         ▶ PRESS START ◀
       </button>
