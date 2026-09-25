@@ -5,7 +5,8 @@ import { soundController } from "@/components/SoundController";
 import { GameOverScreen, WinScreen, StartScreen } from '@/components/GameScreens';
 import IntroScreen from '@/components/IntroScreen';
 import { drawCreature, drawExplorer } from '@/game/characterArt';
-import { PLASMA_COOLDOWN_STEPS, WARDEN_JUMP_INTERVAL_STEPS, resolvePlasmaHit, resolvePlayerDamage, resolvePlayerEnemyContact } from '@/game/combat';
+import { PLASMA_COOLDOWN_STEPS, resolvePlasmaHit, resolvePlayerDamage, resolvePlayerEnemyContact } from '@/game/combat';
+import { isSignalSnareActive, stepEnemyMotion } from '@/game/enemyMotion';
 import { collectShards, resolveBlockHit, stepPowerUps } from '@/game/collectibles';
 import { drawBeacon, drawPickup, drawSpaceBackdrop, drawStarShard, drawTerrain } from '@/game/worldArt';
 import { alignGroundEnemy, beaconFinishBounds, createEditorCreature, creatureHurtbox, playerHurtbox, rectanglesOverlap as checkCollision } from '@/game/geometry';
@@ -412,166 +413,32 @@ export default function Game() {
       return proj.x > world.offset - 100 && proj.x < world.offset + 900;
     });
 
-    // Enemy collision
+    // Advance each creature, then resolve player contact at its new position.
     world.enemies.forEach(enemy => {
-      if (enemy.alive) {
-        // Enemy-specific behavior
-        if (enemy.type === 'signalSnare') {
-          // SignalSnare plant pops in/out
-          enemy.timer = (enemy.timer || 0) + 1;
-          if (enemy.timer > 240) enemy.timer = 0;
+      if (!enemy.alive) return;
+      const outcome = stepEnemyMotion(enemy, player, world.platforms, world.enemies);
+      if (outcome.spawnedEnemy) world.enemies.push(outcome.spawnedEnemy);
+      if (outcome.projectile) {
+        world.enemyProjectiles.push(outcome.projectile);
+        soundController.playFireball();
+      }
+      if (outcome.shellDefeats) {
+        setScore(score => score + outcome.shellDefeats * pointsForEvent('creatureDefeat'));
+        for (let i = 0; i < outcome.shellDefeats; i++) soundController.playKick();
+      }
 
-          // Only collide when popped up
-          const popOffset = Math.sin(enemy.timer * 0.05) * 40;
-          if (popOffset > 10) {
-            const signalSnareRect = { x: enemy.x, y: enemy.baseY - 20, width: 48, height: 50 };
-            if (checkCollision(playerHurtbox(player), signalSnareRect)) {
-              applyContactOutcome(resolvePlayerEnemyContact(player, enemy));
-            }
-          }
-          return; // Skip normal movement for signalSnare
-        }
-
-        if (enemy.type === 'hovermite') {
-          // Hovermite follows player and throws spinies
-          const targetX = player.x + 50;
-          if (enemy.x < targetX) enemy.velocityX = Math.abs(enemy.velocityX);
-          else enemy.velocityX = -Math.abs(enemy.velocityX);
-          enemy.x += enemy.velocityX;
-
-          // Spawn spinies periodically
-          enemy.spawnTimer = (enemy.spawnTimer || 0) + 1;
-          if (enemy.spawnTimer > 180 && Math.abs(enemy.x - player.x) < 300) {
-            enemy.spawnTimer = 0;
-            world.enemies.push({
-              x: enemy.x + 10, y: enemy.y + 50, width: 36, height: 36,
-              velocityX: player.x > enemy.x ? 2 : -2, velocityY: 0,
-              alive: true, type: 'prismite', spawned: true
-            });
-          }
-
-          // Hovermite collision
-          if (checkCollision(playerHurtbox(player), creatureHurtbox(enemy))) {
+      if (enemy.type === 'signalSnare') {
+        if (isSignalSnareActive(enemy)) {
+          const body = { x: enemy.x, y: enemy.baseY - 20, width: 48, height: 50 };
+          if (checkCollision(playerHurtbox(player), body)) {
             applyContactOutcome(resolvePlayerEnemyContact(player, enemy));
           }
-          return;
         }
+        return;
+      }
 
-        if (enemy.type === 'warden') {
-          // Face player
-          enemy.facingLeft = player.x < enemy.x;
-          if (enemy.hitTimer > 0) enemy.hitTimer--;
-
-          // Movement - patrol simple
-          if (Math.abs(player.x - enemy.x) < 600) { // Only active when close
-             // Jump logic
-             enemy.jumpTimer++;
-             if (enemy.jumpTimer >= WARDEN_JUMP_INTERVAL_STEPS && enemy.onGround) {
-                enemy.velocityY = -10;
-                enemy.onGround = false;
-                enemy.jumpTimer = 0;
-             }
-
-             // Gravity
-             enemy.velocityY = (enemy.velocityY || 0) + GRAVITY;
-             enemy.y += enemy.velocityY;
-
-             // Ground collision
-             enemy.onGround = false;
-             world.platforms.forEach(p => {
-                if (enemy.y + enemy.height > p.y && enemy.y + enemy.height < p.y + 20 && enemy.x + enemy.width > p.x && enemy.x < p.x + p.width) {
-                   enemy.y = p.y - enemy.height;
-                   enemy.velocityY = 0;
-                   enemy.onGround = true;
-                }
-             });
-             if (enemy.y > 500) { // Fallback ground
-                enemy.y = 500 - enemy.height;
-                enemy.velocityY = 0;
-                enemy.onGround = true;
-             }
-
-             // Move back and forth slightly
-             enemy.velocityX = enemy.facingLeft ? -1 : 1;
-             // Don't fall off left edge of screen area too much? nah just patrol
-
-             // Fire logic
-             enemy.fireTimer++;
-             if (enemy.fireTimer > 180) { // Fire every ~3 seconds
-                enemy.fireTimer = 0;
-                soundController.playFireball();
-                world.enemyProjectiles.push({
-                   x: enemy.facingLeft ? enemy.x : enemy.x + enemy.width,
-                   y: enemy.y + 20,
-                   velocityX: enemy.facingLeft ? -6 : 6,
-                   type: 'plasma',
-                   frame: 0
-                });
-             }
-          }
-
-          // Player collision (Body damage)
-          if (checkCollision(playerHurtbox(player), creatureHurtbox(enemy))) {
-             applyContactOutcome(resolvePlayerEnemyContact(player, enemy));
-          }
-          return;
-        }
-
-        // Rollpod shell movement
-        if (enemy.type === 'rollpod' && enemy.isShell) {
-          if (enemy.shellVelocity !== 0) {
-            enemy.x += enemy.shellVelocity;
-            // Shell kills other enemies
-            world.enemies.forEach(other => {
-              if (other !== enemy && other.alive && other.type !== 'signalSnare' && other.type !== 'hovermite') {
-                if (checkCollision(enemy, other)) {
-                  other.alive = false;
-                  setScore(s => s + pointsForEvent('creatureDefeat'));
-                  soundController.playKick();
-                }
-              }
-            });
-          }
-        } else {
-          // Normal movement
-          enemy.x += enemy.velocityX;
-        }
-
-        // Apply gravity for spawned spinies
-        if (enemy.spawned && enemy.type === 'prismite') {
-          enemy.velocityY = (enemy.velocityY || 0) + GRAVITY;
-          enemy.y += enemy.velocityY;
-        }
-
-        // Reverse at edges or obstacles (except shells and hovermite)
-        if (enemy.type !== 'hovermite' && !(enemy.type === 'rollpod' && enemy.isShell && enemy.shellVelocity !== 0)) {
-          const onPlatform = world.platforms.some(p =>
-            enemy.x + enemy.width > p.x &&
-            enemy.x < p.x + p.width &&
-            enemy.y + enemy.height >= p.y &&
-            enemy.y + enemy.height <= p.y + 10
-          );
-
-          if (!onPlatform || enemy.x < 0) {
-            enemy.velocityX *= -1;
-          }
-
-          // Spawned prismite lands on platform
-          if (enemy.spawned && enemy.type === 'prismite') {
-            world.platforms.forEach(p => {
-              if (enemy.velocityY > 0 && enemy.y + enemy.height > p.y && enemy.y < p.y + 10 &&
-                  enemy.x + enemy.width > p.x && enemy.x < p.x + p.width) {
-                enemy.y = p.y - enemy.height;
-                enemy.velocityY = 0;
-              }
-            });
-          }
-        }
-
-        // Resolve contact after movement so collision uses the current position.
-        if (checkCollision(playerHurtbox(player), creatureHurtbox(enemy))) {
-          applyContactOutcome(resolvePlayerEnemyContact(player, enemy));
-        }
+      if (checkCollision(playerHurtbox(player), creatureHurtbox(enemy))) {
+        applyContactOutcome(resolvePlayerEnemyContact(player, enemy));
       }
     });
 
