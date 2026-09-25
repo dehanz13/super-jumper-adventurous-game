@@ -15,7 +15,7 @@ npm run dev
 
 ## Current state
 
-The static site builds and serves locally without an account or backend. The explorer, creatures, pickups, terrain, and opening screen use original space-themed presentation. Keyboard and touch controls are covered by desktop and mobile browser tests. A new run starts at Level 1 and progresses through the three existing level maps. Level 1 has a continuous ground route, optional elevated pickups, and a full browser completion test. Gameplay calibration is ongoing; Levels 2 and 3 are prototypes awaiting a dedicated design pass.
+The static site builds and serves locally without an account or backend. The explorer, creatures, pickups, terrain, and opening screen use original space-themed presentation. Keyboard and touch controls are covered by desktop and mobile browser tests. A new run starts at Level 1 and progresses through the three existing level maps. Level 1 teaches movement on continuous ground; Levels 2 and 3 add gap crossings, elevated routes, and recovery landings. Desktop keyboard and mobile touch browser tests complete all three sectors. Gameplay calibration and visual tuning continue.
 
 Level layouts live in `src/game/levels/`, while character and environment drawing live in `src/game/characterArt.js` and `src/game/worldArt.js`. This keeps future artwork and level changes separate from the gameplay loop. The game does not currently submit scores or persist custom levels.
 
