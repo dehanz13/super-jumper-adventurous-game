@@ -5,15 +5,15 @@ import { soundController } from "@/components/SoundController";
 import { GameOverScreen, WinScreen, StartScreen } from '@/components/GameScreens';
 import IntroScreen from '@/components/IntroScreen';
 import { drawCreature, drawExplorer } from '@/game/characterArt';
-import { PLASMA_COOLDOWN_STEPS, WARDEN_JUMP_INTERVAL_STEPS, resolvePlasmaHit } from '@/game/combat';
+import { PLASMA_COOLDOWN_STEPS, WARDEN_JUMP_INTERVAL_STEPS, resolvePlasmaHit, resolvePlayerDamage, resolvePlayerEnemyContact } from '@/game/combat';
 import { collectShards, resolveBlockHit, stepPowerUps } from '@/game/collectibles';
 import { drawBeacon, drawPickup, drawSpaceBackdrop, drawStarShard, drawTerrain } from '@/game/worldArt';
-import { alignGroundEnemy, beaconFinishBounds, createEditorCreature, creatureHurtbox, isStomp, playerHurtbox, rectanglesOverlap as checkCollision } from '@/game/geometry';
+import { alignGroundEnemy, beaconFinishBounds, createEditorCreature, creatureHurtbox, playerHurtbox, rectanglesOverlap as checkCollision } from '@/game/geometry';
 import { DIRECTION_KEYS, directionAtPoint, readGameplayInput } from '@/game/input';
 import { getLevelData, hasNextLevel } from '@/game/levels';
 import { takeFixedSteps } from '@/game/fixedStep';
 import { pointsForEvent } from '@/game/scoring';
-import { GRAVITY, JUMP_FORCE, stepPlayerPhysics } from '@/game/playerPhysics';
+import { GRAVITY, stepPlayerPhysics } from '@/game/playerPhysics';
 
 export default function Game() {
   const canvasRef = useRef(null);
@@ -219,6 +219,12 @@ export default function Game() {
     const ctx = canvas.getContext('2d');
     const player = playerRef.current;
     const world = worldRef.current;
+    const applyContactOutcome = outcome => {
+      if (!outcome) return;
+      if (outcome.points) setScore(score => score + outcome.points);
+      if (outcome.sound) soundController[outcome.sound]();
+      if (outcome.loseLife) loseLife();
+    };
 
     if (gameState === 'editor') {
         // Editor render loop
@@ -401,17 +407,7 @@ export default function Game() {
 
       // Check collision with player
       const projRect = { x: proj.x, y: proj.y + 10, width: 40, height: 20 };
-      if (checkCollision(playerHurtbox(player), projRect) && !player.isInvincible && !player.starTimer) {
-         if (player.powerUp !== 'small') {
-            player.powerUp = 'small';
-            player.height = 50;
-            player.isInvincible = true;
-            player.invincibleTimer = 120;
-            soundController.playDamage();
-          } else {
-            loseLife();
-          }
-      }
+      if (checkCollision(playerHurtbox(player), projRect)) applyContactOutcome(resolvePlayerDamage(player));
 
       return proj.x > world.offset - 100 && proj.x < world.offset + 900;
     });
@@ -427,22 +423,10 @@ export default function Game() {
 
           // Only collide when popped up
           const popOffset = Math.sin(enemy.timer * 0.05) * 40;
-          if (popOffset > 10 && !player.isInvincible) {
+          if (popOffset > 10) {
             const signalSnareRect = { x: enemy.x, y: enemy.baseY - 20, width: 48, height: 50 };
             if (checkCollision(playerHurtbox(player), signalSnareRect)) {
-              if (player.starTimer > 0) {
-                enemy.alive = false;
-                setScore(s => s + pointsForEvent('creatureDefeat'));
-                soundController.playKick();
-              } else if (player.powerUp !== 'small') {
-                player.powerUp = 'small';
-                player.height = 50;
-                player.isInvincible = true;
-                player.invincibleTimer = 120;
-                soundController.playDamage();
-              } else {
-                loseLife();
-              }
+              applyContactOutcome(resolvePlayerEnemyContact(player, enemy));
             }
           }
           return; // Skip normal movement for signalSnare
@@ -468,16 +452,7 @@ export default function Game() {
 
           // Hovermite collision
           if (checkCollision(playerHurtbox(player), creatureHurtbox(enemy))) {
-            if (player.velocityY > 0 && player.y + player.height < enemy.y + 30) {
-              enemy.alive = false;
-              player.velocityY = JUMP_FORCE / 2;
-              setScore(s => s + pointsForEvent('hovermiteDefeat'));
-              soundController.playStomp();
-            } else if (player.starTimer > 0) {
-              enemy.alive = false;
-              setScore(s => s + pointsForEvent('hovermiteDefeat'));
-              soundController.playKick();
-            }
+            applyContactOutcome(resolvePlayerEnemyContact(player, enemy));
           }
           return;
         }
@@ -537,28 +512,7 @@ export default function Game() {
 
           // Player collision (Body damage)
           if (checkCollision(playerHurtbox(player), creatureHurtbox(enemy))) {
-             if (player.starTimer > 0 && !enemy.hitTimer) {
-                enemy.hp--;
-                enemy.hitTimer = 10;
-                soundController.playKick();
-                if (enemy.hp <= 0) {
-                   enemy.alive = false;
-                   setScore(s => s + pointsForEvent('wardenDefeat'));
-                } else {
-                   // Push back?
-                   enemy.velocityX = player.x < enemy.x ? 5 : -5;
-                }
-             } else if (!player.isInvincible) {
-                if (player.powerUp !== 'small') {
-                    player.powerUp = 'small';
-                    player.height = 50;
-                    player.isInvincible = true;
-                    player.invincibleTimer = 120;
-                    soundController.playDamage();
-                } else {
-                    loseLife();
-                }
-             }
+             applyContactOutcome(resolvePlayerEnemyContact(player, enemy));
           }
           return;
         }
@@ -614,84 +568,9 @@ export default function Game() {
           }
         }
 
-        // Player collision
+        // Resolve contact after movement so collision uses the current position.
         if (checkCollision(playerHurtbox(player), creatureHurtbox(enemy))) {
-          if (enemy.type === 'prismite') {
-            // Prismite hurts on stomp too (unless star power)
-            if (player.starTimer > 0) {
-              enemy.alive = false;
-              setScore(s => s + pointsForEvent('creatureDefeat'));
-              soundController.playKick();
-            } else if (!player.isInvincible) {
-              if (player.powerUp !== 'small') {
-                player.powerUp = 'small';
-                player.height = 50;
-                player.isInvincible = true;
-                player.invincibleTimer = 120;
-                soundController.playDamage();
-              } else {
-                loseLife();
-              }
-            }
-          } else if (enemy.type === 'rollpod') {
-            if (isStomp(player, enemy)) {
-              if (enemy.isShell) {
-                // Kick the shell
-                enemy.shellVelocity = player.x < enemy.x ? 10 : -10;
-                soundController.playKick();
-                player.velocityY = JUMP_FORCE / 2;
-              } else {
-                // Turn into shell
-                enemy.isShell = true;
-                enemy.height = 32;
-                enemy.velocityX = 0;
-                soundController.playStomp();
-                player.velocityY = JUMP_FORCE / 2;
-                setScore(s => s + pointsForEvent('rollpodStompShell'));
-              }
-            } else if (enemy.isShell && enemy.shellVelocity === 0) {
-              // Kick stationary shell
-              enemy.shellVelocity = player.facingRight ? 10 : -10;
-              soundController.playKick();
-            } else if (player.starTimer > 0) {
-              enemy.alive = false;
-              setScore(s => s + pointsForEvent('creatureDefeat'));
-              soundController.playKick();
-            } else if (!player.isInvincible && enemy.shellVelocity !== 0) {
-              // Moving shell hurts
-              if (player.powerUp !== 'small') {
-                player.powerUp = 'small';
-                player.height = 50;
-                player.isInvincible = true;
-                player.invincibleTimer = 120;
-                soundController.playDamage();
-              } else {
-                loseLife();
-              }
-            }
-          } else {
-            // Pebblit - normal stomp
-            if (isStomp(player, enemy)) {
-              enemy.alive = false;
-              player.velocityY = JUMP_FORCE / 2;
-              setScore(s => s + pointsForEvent('creatureDefeat'));
-              soundController.playStomp();
-            } else if (player.starTimer > 0) {
-              enemy.alive = false;
-              setScore(s => s + pointsForEvent('creatureDefeat'));
-              soundController.playKick();
-            } else if (!player.isInvincible) {
-              if (player.powerUp !== 'small') {
-                player.powerUp = 'small';
-                player.height = 50;
-                player.isInvincible = true;
-                player.invincibleTimer = 120;
-                soundController.playDamage();
-              } else {
-                loseLife();
-              }
-            }
-          }
+          applyContactOutcome(resolvePlayerEnemyContact(player, enemy));
         }
       }
     });
