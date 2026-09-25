@@ -36,7 +36,7 @@ The run service must choose `playerId`, display name, country, board eligibility
 ## Work needed before implementation can be trusted
 
 - Extract gameplay rules into a deterministic simulation shared by the browser and verifier. The browser now records a versioned, bounded input transcript, but the present loop still orchestrates mutable world state in React/Canvas. A fixed update rate and client-supplied transcript alone are insufficient for server replay. Truncated transcripts must be excluded from ranking, with a clear player-facing state when submission is added.
-- Version the level maps and scoring policy so a run started on one release is verified against that release after a new deployment.
+- Retain each released level-map content version and scoring policy in the verifier so a run started on one release can be checked after a new deployment. The browser now stamps both versions into its local transcript; the server must pin them at run start rather than trusting a client claim.
 - Define the guest identity and country collection flow for both standalone and embedded play. The leaderboard rejects unassigned country codes; a guessed default would create false profile data.
 - Define the secure Hearso-to-game identity handoff. An embedded frame must check message origin and must not receive leaderboard credentials or account secrets through a URL.
 - Enforce completed-campaign-only eligibility in the trusted finish service. Game Over and abandoned runs are excluded. Score rules must be identical on standalone and embedded play.

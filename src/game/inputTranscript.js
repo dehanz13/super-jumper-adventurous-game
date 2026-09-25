@@ -1,4 +1,7 @@
-export const INPUT_TRANSCRIPT_VERSION = 1;
+import { LEVEL_SET_VERSION } from './levels';
+import { SCORING_VERSION } from './scoring';
+
+export const INPUT_TRANSCRIPT_VERSION = 2;
 export const MAX_INPUT_STEPS = 60 * 60 * 30;
 export const MAX_INPUT_SEGMENTS = 20_000;
 
@@ -6,7 +9,13 @@ const CONTROLS = ['left', 'right', 'jump', 'fire'];
 
 export function createInputTranscript(mode = 'campaign') {
   if (mode !== 'campaign' && mode !== 'custom') throw new RangeError(`Unknown run mode: ${mode}`);
-  return { version: INPUT_TRANSCRIPT_VERSION, mode, steps: 0, segments: [], truncated: false, endedAs: null };
+  return {
+    version: INPUT_TRANSCRIPT_VERSION,
+    mode,
+    levelSetVersion: mode === 'campaign' ? LEVEL_SET_VERSION : null,
+    scoringVersion: SCORING_VERSION,
+    steps: 0, segments: [], truncated: false, endedAs: null,
+  };
 }
 
 export function encodeInput(input) {
@@ -46,6 +55,8 @@ export function sealInputTranscript(transcript, outcome) {
 export function validateInputTranscript(transcript) {
   if (transcript.version !== INPUT_TRANSCRIPT_VERSION
     || (transcript.mode !== 'campaign' && transcript.mode !== 'custom')
+    || transcript.levelSetVersion !== (transcript.mode === 'campaign' ? LEVEL_SET_VERSION : null)
+    || transcript.scoringVersion !== SCORING_VERSION
     || (transcript.endedAs !== null && transcript.endedAs !== 'win' && transcript.endedAs !== 'gameover')
     || transcript.truncated
     || !Number.isSafeInteger(transcript.steps) || transcript.steps < 0 || transcript.steps > MAX_INPUT_STEPS
