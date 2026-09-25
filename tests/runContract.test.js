@@ -39,6 +39,10 @@ describe('run service contract', () => {
       { required: ['guestCredential'] },
     ]);
     expect(contract.paths['/runs'].post.responses['401']).toBeDefined();
-    expect(contract.components.schemas.StartRunResponse.properties.guestCredential).toBeDefined();
+    const guestInput = StartRunRequest.properties.guestCredential;
+    const guestOutput = contract.components.schemas.StartRunResponse.properties.guestCredential;
+    expect(guestInput.pattern).toBe('^[A-Za-z0-9_-]{32,128}$');
+    expect(guestOutput.pattern).toBe(guestInput.pattern);
+    expect(guestOutput.maxLength).toBe(guestInput.maxLength);
   });
 });

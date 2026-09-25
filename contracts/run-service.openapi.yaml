@@ -152,6 +152,8 @@ components:
         guestCredential:
           type: string
           minLength: 32
+          maxLength: 128
+          pattern: '^[A-Za-z0-9_-]{32,128}$'
           description: >-
             Opaque credential issued on a prior guest start in the same UTC
             calendar week. It is not the per-run bearer token.
@@ -203,6 +205,8 @@ components:
         guestCredential:
           type: string
           minLength: 32
+          maxLength: 128
+          pattern: '^[A-Za-z0-9_-]{32,128}$'
           description: >-
             Present only when a new guest identity is created. Store privately
             for later attempts in this week; never log or place in a URL.
