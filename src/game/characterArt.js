@@ -1,3 +1,5 @@
+import { playerSpriteBounds } from './geometry';
+
 const COLORS = {
   outline: '#17243F',
   suit: '#6756B8',
@@ -24,10 +26,11 @@ function ellipse(ctx, color, x, y, radiusX, radiusY) {
 export function drawExplorer(ctx, player, offset) {
   if (player.isInvincible && !player.starTimer && Math.floor(Date.now() / 100) % 2 === 0) return;
 
-  const unit = player.powerUp === 'small' ? 2 : 2.5;
-  const size = 13 * unit;
-  const x = player.x - offset + (player.width - size) / 2;
-  const y = player.y + player.height - size;
+  const sprite = playerSpriteBounds(player);
+  const unit = sprite.pixelSize;
+  const size = sprite.width;
+  const x = sprite.x - offset;
+  const y = sprite.y;
   const running = player.onGround && Math.abs(player.velocityX) > 0.5;
   const step = Math.floor(Date.now() / 100) % 2;
   const suit = player.powerUp === 'plasma' ? COLORS.ember : COLORS.suit;

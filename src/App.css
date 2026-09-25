@@ -1,0 +1,14 @@
+.touch-controls {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .touch-controls {
+    display: flex;
+    touch-action: none;
+  }
+
+  .touch-controls button {
+    touch-action: none;
+  }
+}
