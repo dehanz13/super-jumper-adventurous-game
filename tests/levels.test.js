@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getLevelData, hasNextLevel } from '../src/game/levels';
+import { alignGroundEnemy } from '../src/game/geometry';
 
 describe('playable level registry', () => {
   it('loads the three current sectors in order', () => {
@@ -26,5 +27,18 @@ describe('playable level registry', () => {
     expect(ground).toHaveLength(1);
     expect(ground[0].x).toBeLessThanOrEqual(100);
     expect(ground[0].x + ground[0].width).toBeGreaterThan(level.flag.x);
+  });
+
+  it('places Level 2 ground creatures on firm ground and saves the Warden for Level 3', () => {
+    const level = getLevelData(2);
+    expect(level.enemies.some(enemy => enemy.type === 'warden')).toBe(false);
+    for (const enemy of level.enemies) {
+      const aligned = alignGroundEnemy(enemy, level.platforms);
+      const ground = level.platforms.find(platform => platform.type === 'ground'
+        && aligned.x >= platform.x
+        && aligned.x + aligned.width <= platform.x + platform.width
+        && aligned.y + aligned.height === platform.y);
+      expect(ground, `No ground under ${enemy.type} at x=${enemy.x}`).toBeDefined();
+    }
   });
 });
