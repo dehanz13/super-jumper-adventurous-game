@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test('a player can start, pause, and resume a world', async ({ page }) => {
   await page.goto('/');
   await page.getByText(/skip/i).click();
-  await page.getByRole('button', { name: '1-1' }).click();
+  await page.getByRole('button', { name: /press start/i }).click();
 
   await expect(page.locator('canvas')).toBeVisible();
   await expect(page.getByText('SECTOR')).toBeVisible();
@@ -16,7 +16,7 @@ test('a player can start, pause, and resume a world', async ({ page }) => {
 test('the player sprite reaches the ground line', async ({ page, isMobile }) => {
   await page.goto('/');
   await page.getByText(/skip/i).click();
-  await page.getByRole('button', { name: '1-1' }).click();
+  await page.getByRole('button', { name: /press start/i }).click();
 
   await expect.poll(async () => page.locator('canvas').evaluate(canvas => {
     return Array.from(canvas.getContext('2d').getImageData(114, 499, 1, 1).data).slice(0, 3);
@@ -30,7 +30,7 @@ test('mobile controls are available for touch', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'mobile viewport only');
   await page.goto('/');
   await page.getByText(/skip/i).click();
-  await page.getByRole('button', { name: '1-1' }).click();
+  await page.getByRole('button', { name: /press start/i }).click();
 
   await expect(page.getByRole('button', { name: 'Move Right' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Jump A' })).toBeVisible();
@@ -44,7 +44,7 @@ test('dragging across the direction pad reverses movement', async ({ page, isMob
   test.skip(!isMobile, 'mobile viewport only');
   await page.goto('/');
   await page.getByText(/skip/i).click();
-  await page.getByRole('button', { name: '1-1' }).click();
+  await page.getByRole('button', { name: /press start/i }).click();
 
   const playerFootX = () => page.locator('canvas').evaluate(canvas => {
     const pixels = canvas.getContext('2d').getImageData(0, 499, 350, 1).data;

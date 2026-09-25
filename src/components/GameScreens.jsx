@@ -65,30 +65,19 @@ export function StartScreen({ onStart, onEnterEditor }) {
       </div>
 
       <button className="start-actions text-white text-base sm:text-xl font-bold mb-2 sm:mb-4 cursor-pointer hover:text-[#F4DB70] transition-colors relative z-10"
-        onClick={() => onStart(1)}
+        onClick={() => onStart()}
         style={{ textShadow: '2px 2px 0 #000', animation: 'pulse 1s infinite' }}
       >
         ▶ PRESS START ◀
       </button>
 
-      <div className="start-actions bg-[#10172E]/80 border border-[#28D9CF]/50 p-2 sm:p-4 rounded-lg mb-2 sm:mb-4 relative z-10">
-        <div className="text-white text-center mb-2" style={{ textShadow: '1px 1px 0 #000' }}>SELECT SECTOR</div>
-        <div className="flex flex-col gap-2 sm:gap-4 items-center">
-          <div className="flex gap-2 sm:gap-4">
-            {[1, 2, 3].map(lvl => (
-              <button key={lvl} onClick={() => onStart(lvl)}
-                className="bg-[#6756B8] hover:bg-[#8878D7] text-white font-bold px-3 py-1 sm:px-6 sm:py-3 border-4 border-[#17243F] transition-colors"
-                style={{ textShadow: '1px 1px 0 #000' }}>
-                {lvl}-1
-              </button>
-            ))}
-          </div>
-          <button onClick={onEnterEditor}
-            className="flex items-center gap-2 bg-[#137F87] hover:bg-[#28D9CF] text-white font-bold px-4 py-1 sm:px-8 sm:py-3 border-4 border-[#17243F] transition-colors"
-            style={{ textShadow: '1px 1px 0 #000' }}>
-            <Hammer className="w-5 h-5" /> LEVEL CREATOR
-          </button>
-        </div>
+      <div className="start-actions bg-[#10172E]/80 border border-[#28D9CF]/50 p-2 sm:p-4 rounded-lg mb-2 sm:mb-4 text-center relative z-10">
+        <div className="text-[#F4DB70] mb-2">STARTS IN SECTOR 1</div>
+        <button onClick={onEnterEditor}
+          className="flex items-center gap-2 bg-[#137F87] hover:bg-[#28D9CF] text-white font-bold px-4 py-1 sm:px-8 sm:py-3 border-4 border-[#17243F] transition-colors"
+          style={{ textShadow: '1px 1px 0 #000' }}>
+          <Hammer className="w-5 h-5" /> LEVEL CREATOR
+        </button>
       </div>
 
       <div className="text-white text-center text-xs sm:text-sm relative z-10 pb-2 sm:pb-4" style={{ textShadow: '1px 1px 0 #000' }}>

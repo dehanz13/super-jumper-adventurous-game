@@ -9,6 +9,7 @@ import { resolvePlasmaHit } from '@/game/combat';
 import { drawBeacon, drawPickup, drawSpaceBackdrop, drawStarShard, drawTerrain } from '@/game/worldArt';
 import { alignGroundEnemy } from '@/game/geometry';
 import { DIRECTION_KEYS, directionAtPoint } from '@/game/input';
+import { getLevelData, hasNextLevel } from '@/game/levels';
 
 const GRAVITY = 0.6;
 const JUMP_FORCE = -14;
@@ -67,362 +68,6 @@ export default function Game() {
     flag: null
   });
 
-  const getLevelData = useCallback((levelNum) => {
-    const levels = {
-      // LEVEL 1 - Green Meadows (Easy - Introduction)
-      1: {
-        name: "Green Meadows",
-        maxOffset: 2600,
-        platforms: [
-          // Ground sections - generous spacing
-          { x: 0, y: 500, width: 800, height: 100, type: 'ground' },
-          { x: 900, y: 500, width: 600, height: 100, type: 'ground' },
-          { x: 1600, y: 500, width: 800, height: 100, type: 'ground' },
-          { x: 2500, y: 500, width: 1000, height: 100, type: 'ground' },
-
-          // Floating platforms - easy jumps
-          { x: 300, y: 380, width: 100, height: 30, type: 'brick' },
-          { x: 450, y: 300, width: 50, height: 30, type: 'question' },
-          { x: 550, y: 300, width: 100, height: 30, type: 'brick' },
-          { x: 700, y: 220, width: 50, height: 30, type: 'question' },
-
-          { x: 1000, y: 350, width: 150, height: 30, type: 'brick' },
-          { x: 1200, y: 280, width: 100, height: 30, type: 'brick' },
-          { x: 1350, y: 200, width: 50, height: 30, type: 'question' },
-
-          { x: 1700, y: 380, width: 200, height: 30, type: 'brick' },
-          { x: 1950, y: 300, width: 100, height: 30, type: 'brick' },
-          { x: 2100, y: 220, width: 150, height: 30, type: 'brick' },
-
-          { x: 2600, y: 350, width: 100, height: 30, type: 'question' },
-          { x: 2800, y: 280, width: 150, height: 30, type: 'brick' },
-          { x: 3000, y: 200, width: 100, height: 30, type: 'brick' },
-        ],
-        coins: [
-          { x: 320, y: 330, collected: false },
-          { x: 360, y: 330, collected: false },
-          { x: 465, y: 250, collected: false },
-          { x: 570, y: 250, collected: false },
-          { x: 610, y: 250, collected: false },
-          { x: 715, y: 170, collected: false },
-          { x: 1050, y: 300, collected: false },
-          { x: 1100, y: 300, collected: false },
-          { x: 1230, y: 230, collected: false },
-          { x: 1365, y: 150, collected: false },
-          { x: 1780, y: 330, collected: false },
-          { x: 1830, y: 330, collected: false },
-          { x: 1980, y: 250, collected: false },
-          { x: 2150, y: 170, collected: false },
-          { x: 2200, y: 170, collected: false },
-          { x: 2630, y: 300, collected: false },
-          { x: 2860, y: 230, collected: false },
-          { x: 2910, y: 230, collected: false },
-          { x: 3030, y: 150, collected: false },
-        ],
-        enemies: [
-          { x: 500, y: 455, width: 40, height: 40, velocityX: -1.5, alive: true, type: 'pebblit' },
-          { x: 800, y: 455, width: 40, height: 48, velocityX: -1.5, alive: true, type: 'rollpod', isShell: false, shellVelocity: 0 },
-          { x: 1100, y: 455, width: 40, height: 40, velocityX: -1.5, alive: true, type: 'pebblit' },
-          { x: 1300, y: 455, width: 40, height: 40, velocityX: -2, alive: true, type: 'pebblit' },
-          { x: 1500, y: 455, width: 40, height: 48, velocityX: -1.5, alive: true, type: 'rollpod', isShell: false, shellVelocity: 0 },
-          { x: 1800, y: 455, width: 40, height: 40, velocityX: -1.5, alive: true, type: 'pebblit' },
-          { x: 2000, y: 455, width: 40, height: 40, velocityX: -2, alive: true, type: 'pebblit' },
-          { x: 2400, y: 455, width: 40, height: 48, velocityX: -1.5, alive: true, type: 'rollpod', isShell: false, shellVelocity: 0 },
-          { x: 2700, y: 455, width: 40, height: 40, velocityX: -1.5, alive: true, type: 'pebblit' },
-          { x: 2900, y: 455, width: 40, height: 40, velocityX: -2, alive: true, type: 'pebblit' },
-          { x: 450, y: 436, width: 48, height: 64, velocityX: 0, alive: true, type: 'signalSnare', baseY: 436, timer: 0 },
-          { x: 1150, y: 404, width: 48, height: 64, velocityX: 0, alive: true, type: 'signalSnare', baseY: 404, timer: 60 },
-          { x: 3050, y: 436, width: 64, height: 64, velocityX: 0, alive: true, type: 'warden', hp: 5, maxHp: 5, fireTimer: 0, jumpTimer: 0, facingLeft: true },
-        ],
-        powerUps: [
-          { x: 465, y: 270, type: 'powerCell', collected: false, velocityX: 1, spawned: false },
-          { x: 715, y: 190, type: 'plasma', collected: false, spawned: false },
-          { x: 1365, y: 170, type: 'spectrum', collected: false, velocityX: 2, spawned: false },
-          { x: 2630, y: 320, type: 'powerCell', collected: false, velocityX: 1, spawned: false },
-        ],
-        flag: { x: 3200, y: 200, width: 20, height: 300 }
-      },
-
-      // LEVEL 2 - Underground Caverns (Medium - More gaps, faster enemies)
-      2: {
-        name: "Underground Caverns",
-        maxOffset: 3200,
-        platforms: [
-          // Ground sections with larger gaps
-          { x: 0, y: 500, width: 500, height: 100, type: 'ground' },
-          { x: 650, y: 500, width: 400, height: 100, type: 'ground' },
-          { x: 1200, y: 500, width: 300, height: 100, type: 'ground' },
-          { x: 1700, y: 500, width: 500, height: 100, type: 'ground' },
-          { x: 2400, y: 500, width: 400, height: 100, type: 'ground' },
-          { x: 3000, y: 500, width: 800, height: 100, type: 'ground' },
-
-          // Staircase platforms
-          { x: 200, y: 420, width: 80, height: 30, type: 'brick' },
-          { x: 300, y: 350, width: 80, height: 30, type: 'brick' },
-          { x: 400, y: 280, width: 80, height: 30, type: 'question' },
-
-          // Floating platform bridge over gap
-          { x: 520, y: 380, width: 60, height: 30, type: 'brick' },
-          { x: 600, y: 350, width: 60, height: 30, type: 'brick' },
-
-          // Vertical challenge section
-          { x: 750, y: 400, width: 100, height: 30, type: 'brick' },
-          { x: 850, y: 320, width: 50, height: 30, type: 'question' },
-          { x: 950, y: 240, width: 100, height: 30, type: 'brick' },
-          { x: 1050, y: 160, width: 50, height: 30, type: 'question' },
-
-          // Platform path over large gap
-          { x: 1100, y: 350, width: 60, height: 30, type: 'brick' },
-          { x: 1180, y: 300, width: 60, height: 30, type: 'brick' },
-
-          // Zigzag platforms
-          { x: 1350, y: 400, width: 100, height: 30, type: 'brick' },
-          { x: 1500, y: 320, width: 100, height: 30, type: 'question' },
-          { x: 1650, y: 400, width: 100, height: 30, type: 'brick' },
-
-          // Challenge tower
-          { x: 1850, y: 420, width: 120, height: 30, type: 'brick' },
-          { x: 1880, y: 340, width: 60, height: 30, type: 'brick' },
-          { x: 1850, y: 260, width: 120, height: 30, type: 'question' },
-          { x: 1880, y: 180, width: 60, height: 30, type: 'brick' },
-
-          // Bridge to final section
-          { x: 2050, y: 350, width: 80, height: 30, type: 'brick' },
-          { x: 2150, y: 320, width: 80, height: 30, type: 'brick' },
-          { x: 2250, y: 350, width: 80, height: 30, type: 'brick' },
-          { x: 2350, y: 380, width: 80, height: 30, type: 'brick' },
-
-          // Descending platforms
-          { x: 2500, y: 400, width: 100, height: 30, type: 'brick' },
-          { x: 2650, y: 350, width: 50, height: 30, type: 'question' },
-          { x: 2750, y: 300, width: 100, height: 30, type: 'brick' },
-          { x: 2900, y: 250, width: 50, height: 30, type: 'question' },
-
-          // Final approach
-          { x: 3100, y: 380, width: 150, height: 30, type: 'brick' },
-          { x: 3300, y: 320, width: 100, height: 30, type: 'brick' },
-          { x: 3450, y: 260, width: 100, height: 30, type: 'brick' },
-        ],
-        coins: [
-          // Staircase coins
-          { x: 230, y: 370, collected: false },
-          { x: 330, y: 300, collected: false },
-          { x: 430, y: 230, collected: false },
-          // Bridge coins
-          { x: 540, y: 330, collected: false },
-          { x: 620, y: 300, collected: false },
-          // Vertical section
-          { x: 790, y: 350, collected: false },
-          { x: 865, y: 270, collected: false },
-          { x: 990, y: 190, collected: false },
-          { x: 1065, y: 110, collected: false },
-          // Gap crossing
-          { x: 1120, y: 300, collected: false },
-          { x: 1200, y: 250, collected: false },
-          // Zigzag
-          { x: 1390, y: 350, collected: false },
-          { x: 1540, y: 270, collected: false },
-          { x: 1690, y: 350, collected: false },
-          // Tower
-          { x: 1900, y: 370, collected: false },
-          { x: 1900, y: 290, collected: false },
-          { x: 1900, y: 210, collected: false },
-          { x: 1900, y: 130, collected: false },
-          // Bridge
-          { x: 2080, y: 300, collected: false },
-          { x: 2180, y: 270, collected: false },
-          { x: 2280, y: 300, collected: false },
-          { x: 2380, y: 330, collected: false },
-          // Descending
-          { x: 2540, y: 350, collected: false },
-          { x: 2665, y: 300, collected: false },
-          { x: 2790, y: 250, collected: false },
-          { x: 2915, y: 200, collected: false },
-          // Final
-          { x: 3160, y: 330, collected: false },
-          { x: 3340, y: 270, collected: false },
-          { x: 3490, y: 210, collected: false },
-        ],
-        enemies: [
-          { x: 300, y: 455, width: 40, height: 40, velocityX: -2, alive: true, type: 'pebblit' },
-          { x: 600, y: 455, width: 40, height: 48, velocityX: -2, alive: true, type: 'rollpod', isShell: false, shellVelocity: 0 },
-          { x: 900, y: 455, width: 40, height: 40, velocityX: -2, alive: true, type: 'pebblit' },
-          { x: 1100, y: 455, width: 36, height: 36, velocityX: -1.5, alive: true, type: 'prismite' },
-          { x: 1400, y: 455, width: 40, height: 40, velocityX: -2, alive: true, type: 'pebblit' },
-          { x: 1600, y: 455, width: 40, height: 48, velocityX: -2.5, alive: true, type: 'rollpod', isShell: false, shellVelocity: 0 },
-          { x: 1800, y: 455, width: 40, height: 40, velocityX: -2, alive: true, type: 'pebblit' },
-          { x: 2000, y: 455, width: 36, height: 36, velocityX: -2, alive: true, type: 'prismite' },
-          { x: 2200, y: 455, width: 40, height: 48, velocityX: -2.5, alive: true, type: 'rollpod', isShell: false, shellVelocity: 0 },
-          { x: 2500, y: 455, width: 40, height: 40, velocityX: -2.5, alive: true, type: 'pebblit' },
-          { x: 2700, y: 455, width: 36, height: 36, velocityX: -2.5, alive: true, type: 'prismite' },
-          { x: 3100, y: 455, width: 40, height: 40, velocityX: -2.5, alive: true, type: 'pebblit' },
-          { x: 3300, y: 455, width: 40, height: 48, velocityX: -3, alive: true, type: 'rollpod', isShell: false, shellVelocity: 0 },
-          { x: 3450, y: 436, width: 64, height: 64, velocityX: 0, alive: true, type: 'warden', hp: 8, maxHp: 8, fireTimer: 0, jumpTimer: 0, facingLeft: true },
-        ],
-        powerUps: [
-          { x: 430, y: 250, type: 'powerCell', collected: false, velocityX: 1, spawned: false },
-          { x: 865, y: 290, type: 'plasma', collected: false, spawned: false },
-          { x: 1540, y: 290, type: 'spectrum', collected: false, velocityX: 2, spawned: false },
-          { x: 2665, y: 320, type: 'powerCell', collected: false, velocityX: 1, spawned: false },
-          { x: 2915, y: 220, type: 'plasma', collected: false, spawned: false },
-        ],
-        flag: { x: 3600, y: 200, width: 20, height: 300 }
-      },
-
-      // LEVEL 3 - Sky Fortress (Hard - Precision jumps, many enemies, narrow platforms)
-      3: {
-        name: "Sky Fortress",
-        maxOffset: 3800,
-        platforms: [
-          // Starting area
-          { x: 0, y: 500, width: 300, height: 100, type: 'ground' },
-
-          // Sky bridge - narrow platforms
-          { x: 380, y: 450, width: 50, height: 30, type: 'brick' },
-          { x: 480, y: 400, width: 50, height: 30, type: 'brick' },
-          { x: 580, y: 350, width: 50, height: 30, type: 'question' },
-          { x: 680, y: 300, width: 50, height: 30, type: 'brick' },
-          { x: 780, y: 250, width: 50, height: 30, type: 'brick' },
-
-          // Floating island
-          { x: 880, y: 300, width: 200, height: 100, type: 'ground' },
-
-          // Descending challenge
-          { x: 1150, y: 350, width: 40, height: 30, type: 'brick' },
-          { x: 1230, y: 400, width: 40, height: 30, type: 'brick' },
-          { x: 1310, y: 450, width: 40, height: 30, type: 'question' },
-
-          // Ground section
-          { x: 1400, y: 500, width: 250, height: 100, type: 'ground' },
-
-          // Vertical tower climb
-          { x: 1700, y: 450, width: 60, height: 30, type: 'brick' },
-          { x: 1650, y: 380, width: 60, height: 30, type: 'brick' },
-          { x: 1720, y: 310, width: 60, height: 30, type: 'question' },
-          { x: 1650, y: 240, width: 60, height: 30, type: 'brick' },
-          { x: 1720, y: 170, width: 60, height: 30, type: 'brick' },
-          { x: 1650, y: 100, width: 60, height: 30, type: 'question' },
-
-          // High bridge
-          { x: 1800, y: 150, width: 40, height: 30, type: 'brick' },
-          { x: 1880, y: 150, width: 40, height: 30, type: 'brick' },
-          { x: 1960, y: 150, width: 40, height: 30, type: 'brick' },
-          { x: 2040, y: 150, width: 40, height: 30, type: 'brick' },
-
-          // Descending staircase
-          { x: 2120, y: 200, width: 50, height: 30, type: 'brick' },
-          { x: 2200, y: 260, width: 50, height: 30, type: 'brick' },
-          { x: 2280, y: 320, width: 50, height: 30, type: 'question' },
-          { x: 2360, y: 380, width: 50, height: 30, type: 'brick' },
-
-          // Ground checkpoint
-          { x: 2450, y: 500, width: 200, height: 100, type: 'ground' },
-
-          // Gauntlet - alternating heights
-          { x: 2720, y: 420, width: 40, height: 30, type: 'brick' },
-          { x: 2800, y: 350, width: 40, height: 30, type: 'brick' },
-          { x: 2880, y: 280, width: 40, height: 30, type: 'question' },
-          { x: 2960, y: 350, width: 40, height: 30, type: 'brick' },
-          { x: 3040, y: 420, width: 40, height: 30, type: 'brick' },
-          { x: 3120, y: 350, width: 40, height: 30, type: 'brick' },
-          { x: 3200, y: 280, width: 40, height: 30, type: 'question' },
-          { x: 3280, y: 350, width: 40, height: 30, type: 'brick' },
-
-          // Tiny platforms finale
-          { x: 3380, y: 380, width: 30, height: 30, type: 'brick' },
-          { x: 3450, y: 340, width: 30, height: 30, type: 'brick' },
-          { x: 3520, y: 300, width: 30, height: 30, type: 'brick' },
-          { x: 3590, y: 260, width: 30, height: 30, type: 'question' },
-
-          // Final platform
-          { x: 3700, y: 300, width: 150, height: 30, type: 'brick' },
-          { x: 3900, y: 500, width: 300, height: 100, type: 'ground' },
-        ],
-        coins: [
-          // Sky bridge
-          { x: 395, y: 400, collected: false },
-          { x: 495, y: 350, collected: false },
-          { x: 595, y: 300, collected: false },
-          { x: 695, y: 250, collected: false },
-          { x: 795, y: 200, collected: false },
-          // Floating island
-          { x: 920, y: 250, collected: false },
-          { x: 970, y: 250, collected: false },
-          { x: 1020, y: 250, collected: false },
-          // Descending
-          { x: 1160, y: 300, collected: false },
-          { x: 1240, y: 350, collected: false },
-          { x: 1320, y: 400, collected: false },
-          // Tower climb
-          { x: 1720, y: 400, collected: false },
-          { x: 1670, y: 330, collected: false },
-          { x: 1740, y: 260, collected: false },
-          { x: 1670, y: 190, collected: false },
-          { x: 1740, y: 120, collected: false },
-          { x: 1670, y: 50, collected: false },
-          // High bridge
-          { x: 1815, y: 100, collected: false },
-          { x: 1895, y: 100, collected: false },
-          { x: 1975, y: 100, collected: false },
-          { x: 2055, y: 100, collected: false },
-          // Descending staircase
-          { x: 2135, y: 150, collected: false },
-          { x: 2215, y: 210, collected: false },
-          { x: 2295, y: 270, collected: false },
-          { x: 2375, y: 330, collected: false },
-          // Gauntlet
-          { x: 2735, y: 370, collected: false },
-          { x: 2815, y: 300, collected: false },
-          { x: 2895, y: 230, collected: false },
-          { x: 2975, y: 300, collected: false },
-          { x: 3055, y: 370, collected: false },
-          { x: 3135, y: 300, collected: false },
-          { x: 3215, y: 230, collected: false },
-          { x: 3295, y: 300, collected: false },
-          // Finale
-          { x: 3390, y: 330, collected: false },
-          { x: 3460, y: 290, collected: false },
-          { x: 3530, y: 250, collected: false },
-          { x: 3600, y: 210, collected: false },
-          // Final platform bonus
-          { x: 3750, y: 250, collected: false },
-          { x: 3800, y: 250, collected: false },
-        ],
-        enemies: [
-          // Early enemies
-          { x: 200, y: 455, width: 40, height: 40, velocityX: -2, alive: true, type: 'pebblit' },
-          // Floating island enemies
-          { x: 920, y: 255, width: 36, height: 36, velocityX: -2.5, alive: true, type: 'prismite' },
-          { x: 1000, y: 255, width: 40, height: 48, velocityX: 2.5, alive: true, type: 'rollpod', isShell: false, shellVelocity: 0 },
-          // Ground section
-          { x: 1450, y: 455, width: 40, height: 40, velocityX: -3, alive: true, type: 'pebblit' },
-          { x: 1550, y: 455, width: 36, height: 36, velocityX: -2.5, alive: true, type: 'prismite' },
-          // Hovermite in sky
-          { x: 1700, y: 80, width: 40, height: 48, velocityX: 1.5, alive: true, type: 'hovermite', spawnTimer: 0 },
-          // Checkpoint area
-          { x: 2480, y: 455, width: 40, height: 48, velocityX: -3, alive: true, type: 'rollpod', isShell: false, shellVelocity: 0 },
-          { x: 2550, y: 455, width: 36, height: 36, velocityX: -2.5, alive: true, type: 'prismite' },
-          { x: 2620, y: 455, width: 40, height: 40, velocityX: -3, alive: true, type: 'pebblit' },
-          // Final ground
-          { x: 3950, y: 455, width: 36, height: 36, velocityX: -3.5, alive: true, type: 'prismite' },
-          { x: 4050, y: 455, width: 40, height: 48, velocityX: -3, alive: true, type: 'rollpod', isShell: false, shellVelocity: 0 },
-          { x: 4100, y: 455, width: 40, height: 40, velocityX: -3.5, alive: true, type: 'pebblit' },
-          { x: 4000, y: 436, width: 64, height: 64, velocityX: 0, alive: true, type: 'warden', hp: 10, maxHp: 10, fireTimer: 0, jumpTimer: 0, facingLeft: true },
-        ],
-        powerUps: [
-          { x: 595, y: 320, type: 'powerCell', collected: false, velocityX: 1, spawned: false },
-          { x: 1320, y: 420, type: 'spectrum', collected: false, velocityX: 2, spawned: false },
-          { x: 1740, y: 280, type: 'plasma', collected: false, spawned: false },
-          { x: 2295, y: 290, type: 'spectrum', collected: false, velocityX: 2, spawned: false },
-          { x: 2895, y: 250, type: 'plasma', collected: false, spawned: false },
-          { x: 3600, y: 230, type: 'powerCell', collected: false, velocityX: 1, spawned: false },
-        ],
-        flag: { x: 4150, y: 200, width: 20, height: 300 }
-      }
-    };
-
-    return levels[levelNum] || levels[1];
-  }, []);
 
   const initLevel = useCallback(
     /** @param {number | 'custom'} levelNum */
@@ -478,7 +123,7 @@ export default function Game() {
       lastFireball: 0,
       fireballs: []
     };
-    }, [getLevelData]);
+    }, []);
 
   const drawEffect = (ctx, effect, offset) => {
     const screenX = effect.x - offset;
@@ -1194,7 +839,7 @@ export default function Game() {
     // Flag (win condition)
     if (world.flag && checkCollision(player, world.flag)) {
       soundController.playStageClear();
-      if (level < 3) {
+      if (hasNextLevel(level)) {
         // Next level
         setLevel(l => l + 1);
         setGameState('levelcomplete');
@@ -1425,11 +1070,11 @@ export default function Game() {
     }
   }, [gameState]);
 
-  const startGame = (startLevel = 1) => {
+  const startGame = () => {
     soundController.init();
-    soundController.playBGM(startLevel);
-    setLevel(startLevel);
-    initLevel(startLevel);
+    soundController.playBGM(1);
+    setLevel(1);
+    initLevel(1);
     setScore(0);
     setShards(0);
     setLives(3);
@@ -1506,7 +1151,7 @@ export default function Game() {
           <div className="flex gap-2">
             <Button aria-label="Toggle sound" onClick={toggleMute} variant="outline" size="icon" className="bg-black/40 border-white/20 hover:bg-white/10">{isMuted ? <VolumeX className="h-4 w-4 text-white" /> : <Volume2 className="h-4 w-4 text-white" />}</Button>
             {gameState === 'playing' && <Button aria-label="Pause game" onClick={togglePause} variant="outline" size="icon" className="bg-black/40 border-white/20 hover:bg-white/10"><Pause className="h-4 w-4 text-white" /></Button>}
-            <Button aria-label="Restart game" onClick={() => startGame(1)} variant="outline" size="icon" className="bg-black/40 border-white/20 hover:bg-white/10"><RotateCcw className="h-4 w-4 text-white" /></Button>
+            <Button aria-label="Restart game" onClick={startGame} variant="outline" size="icon" className="bg-black/40 border-white/20 hover:bg-white/10"><RotateCcw className="h-4 w-4 text-white" /></Button>
           </div>
         </div>
 
@@ -1574,9 +1219,9 @@ export default function Game() {
           {gameState === 'intro' && <IntroScreen introPhase={introPhase} onSkip={() => { setGameState('start'); setIntroPhase(0); }} />}
           {gameState === 'start' && <StartScreen onStart={startGame} onEnterEditor={enterEditor} />}
           {gameState === 'paused' && <div className="absolute inset-0 bg-[#10172E] flex flex-col items-center justify-center" style={{fontFamily:'monospace'}}><div className="text-white text-4xl font-bold mb-8" style={{textShadow:'3px 3px 0 #6756B8'}}>PAUSED</div><button onClick={togglePause} className="bg-[#6756B8] hover:bg-[#8878D7] text-white font-bold px-8 py-4 border-4 border-black text-xl transition-colors" style={{textShadow:'1px 1px 0 #000'}}>▶ CONTINUE</button></div>}
-          {gameState === 'gameover' && <GameOverScreen score={score} level={level} onRestart={() => startGame(1)} />}
+          {gameState === 'gameover' && <GameOverScreen score={score} level={level} onRestart={startGame} />}
           {gameState === 'levelcomplete' && <div className="absolute inset-0 bg-[#10172E] flex flex-col items-center justify-center" style={{fontFamily:'monospace'}}><div className="text-[#F4DB70] text-4xl font-bold mb-4" style={{textShadow:'3px 3px 0 #6756B8'}}>COURSE CLEAR!</div><div className="text-white text-xl mb-2">SECTOR {level - 1}-1 COMPLETED</div><div className="text-[#F4DB70] text-2xl mb-2">SCORE: {String(score).padStart(6,'0')}</div><div className="text-white text-lg mb-8">GET READY FOR SECTOR {level}-1</div><button onClick={nextLevel} className="bg-[#137F87] hover:bg-[#28D9CF] text-white font-bold px-8 py-4 border-4 border-black text-xl transition-colors" style={{textShadow:'1px 1px 0 #000'}}>▶ NEXT SECTOR</button></div>}
-          {gameState === 'win' && <WinScreen score={score} onRestart={() => startGame(1)} />}
+          {gameState === 'win' && <WinScreen score={score} onRestart={startGame} />}
         </div>
         {/* Mobile Controls */}
         <div className="touch-controls mt-4 justify-between items-center gap-2 sm:px-4" style={{fontFamily:'monospace'}}>
