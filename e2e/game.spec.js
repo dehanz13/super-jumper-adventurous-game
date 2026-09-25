@@ -13,6 +13,21 @@ test('a player can start, pause, and resume a world', async ({ page }) => {
   await expect(page.getByText('PAUSED')).toBeHidden();
 });
 
+test('the first sector can be completed with keyboard controls', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'the full keyboard route is covered on desktop; mobile touch is tested separately');
+  test.setTimeout(45_000);
+  await page.goto('/');
+  await page.getByText(/skip/i).click();
+  await page.getByRole('button', { name: /press start/i }).click();
+
+  await page.keyboard.down('ArrowRight');
+  await page.keyboard.down('Space');
+  await expect(page.getByText('COURSE CLEAR!')).toBeVisible({ timeout: 35_000 });
+  await page.keyboard.up('Space');
+  await page.keyboard.up('ArrowRight');
+  await expect(page.getByText('GET READY FOR SECTOR 2-1')).toBeVisible();
+});
+
 test('the player sprite reaches the ground line', async ({ page, isMobile }) => {
   await page.goto('/');
   await page.getByText(/skip/i).click();

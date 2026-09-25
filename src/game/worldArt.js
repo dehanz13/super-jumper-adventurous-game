@@ -67,6 +67,8 @@ export function drawBeacon(ctx, beacon, offset) {
   const x = beacon.x - offset;
   const bottom = beacon.y + beacon.height;
 
+  ctx.fillStyle = 'rgba(40, 217, 207, 0.16)';
+  ctx.fillRect(x - 12, 0, beacon.width + 24, bottom);
   ctx.fillStyle = INK;
   ctx.fillRect(x + 2, beacon.y, 16, beacon.height);
   ctx.fillStyle = VIOLET;
