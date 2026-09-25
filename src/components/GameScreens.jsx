@@ -1,16 +1,18 @@
+import { useRef } from 'react';
 import { Hammer } from 'lucide-react';
+import { gsap, useGSAP } from '@/lib/animation';
 
 export function GameOverScreen({ score, level, onRestart }) {
   return (
-    <div className="absolute inset-0 bg-black flex flex-col items-center justify-center" style={{ fontFamily: 'monospace' }}>
-      <div className="text-[#E52521] text-5xl font-bold mb-4" style={{ textShadow: '3px 3px 0 #000' }}>
+    <div className="absolute inset-0 bg-[#10172E] flex flex-col items-center justify-center" style={{ fontFamily: 'monospace' }}>
+      <div className="text-[#F38173] text-5xl font-bold mb-4" style={{ textShadow: '3px 3px 0 #000' }}>
         GAME OVER
       </div>
       <div className="text-white text-2xl mb-2">SCORE: {String(score).padStart(6, '0')}</div>
-      <div className="text-[#F8D830] text-xl mb-4">WORLD {level}-1</div>
+      <div className="text-[#F4DB70] text-xl mb-4">SECTOR {level}-1</div>
       <button
         onClick={onRestart}
-        className="mt-6 bg-[#E52521] hover:bg-[#FF6B6B] text-white font-bold px-8 py-4 border-4 border-black text-xl transition-colors"
+        className="mt-6 bg-[#6756B8] hover:bg-[#8878D7] text-white font-bold px-8 py-4 border-4 border-black text-xl transition-colors"
         style={{ textShadow: '1px 1px 0 #000' }}
       >
         ▶ TRY AGAIN
@@ -21,19 +23,19 @@ export function GameOverScreen({ score, level, onRestart }) {
 
 export function WinScreen({ score, onRestart }) {
   return (
-    <div className="absolute inset-0 bg-black flex flex-col items-center justify-center" style={{ fontFamily: 'monospace' }}>
-      <div className="text-[#F8D830] text-3xl font-bold mb-2" style={{ textShadow: '3px 3px 0 #C84C0C' }}>
+    <div className="absolute inset-0 bg-[#10172E] flex flex-col items-center justify-center" style={{ fontFamily: 'monospace' }}>
+      <div className="text-[#F4DB70] text-3xl font-bold mb-2" style={{ textShadow: '3px 3px 0 #6756B8' }}>
         ★ CONGRATULATIONS ★
       </div>
-      <div className="text-white text-5xl font-bold mb-4" style={{ textShadow: '3px 3px 0 #E52521' }}>
+      <div className="text-white text-5xl font-bold mb-4" style={{ textShadow: '3px 3px 0 #6756B8' }}>
         YOU WIN!
       </div>
-      <div className="text-white text-xl mb-2">ALL WORLDS COMPLETED!</div>
-      <div className="text-[#F8D830] text-3xl mb-1">FINAL SCORE</div>
+      <div className="text-white text-xl mb-2">ALL SECTORS CLEARED!</div>
+      <div className="text-[#F4DB70] text-3xl mb-1">FINAL SCORE</div>
       <div className="text-white text-4xl mb-2">{String(score).padStart(6, '0')}</div>
       <button
         onClick={onRestart}
-        className="mt-6 bg-[#F8D830] hover:bg-[#FFFF88] text-black font-bold px-8 py-4 border-4 border-black text-xl transition-colors"
+        className="mt-6 bg-[#28D9CF] hover:bg-[#E7FAFF] text-[#17243F] font-bold px-8 py-4 border-4 border-black text-xl transition-colors"
       >
         ▶ PLAY AGAIN
       </button>
@@ -42,50 +44,57 @@ export function WinScreen({ score, onRestart }) {
 }
 
 export function StartScreen({ onStart, onEnterEditor }) {
+  const rootRef = useRef(null);
+
+  useGSAP(() => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) return;
+    gsap.timeline({ defaults: { ease: 'power2.out' } })
+      .fromTo('.start-title', { y: 24, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.7 })
+      .fromTo('.start-actions', { y: 18, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.5 }, '-=0.3');
+  }, { scope: rootRef });
+
   return (
-    <div className="absolute inset-0 bg-[#5C94FC] flex flex-col items-center justify-center" style={{ fontFamily: 'monospace' }}>
-      <div className="mb-8 text-center">
-        <div className="text-[#F8D830] text-2xl font-bold mb-2" style={{ textShadow: '3px 3px 0 #C84C0C' }}>SUPER</div>
-        <div className="text-[#E52521] text-6xl font-black mb-1" style={{ textShadow: '4px 4px 0 #000, 6px 6px 0 #C84C0C', letterSpacing: '4px' }}>
-          MARIO BROS.
+    <div ref={rootRef} className="absolute inset-0 flex flex-col items-center justify-start sm:justify-center overflow-y-auto py-3 sm:py-0" style={{ fontFamily: 'monospace', background: 'radial-gradient(circle at 75% 18%, #6756B8 0, #25385F 32%, #10172E 80%)' }}>
+      <div className="pointer-events-none absolute top-8 right-10 w-20 h-20 sm:w-32 sm:h-32 rounded-full border-8 border-[#28D9CF]/60 bg-[#7788AC]/70" />
+      <div className="start-title mb-2 sm:mb-8 text-center relative z-10">
+        <div className="text-[#F4DB70] text-base sm:text-2xl font-bold sm:mb-2" style={{ textShadow: '3px 3px 0 #17243F' }}>NOVA'S</div>
+        <div className="text-[#28D9CF] text-2xl sm:text-6xl font-black mb-1" style={{ textShadow: '4px 4px 0 #000, 6px 6px 0 #6756B8', letterSpacing: '4px' }}>
+          ORBIT JUMP
         </div>
-        <div className="text-white text-lg mt-4" style={{ textShadow: '2px 2px 0 #000' }}>CLONE EDITION</div>
+        <div className="text-white text-xs sm:text-lg sm:mt-4" style={{ textShadow: '2px 2px 0 #000' }}>A COSMIC ADVENTURE</div>
       </div>
 
-      <div className="text-white text-xl font-bold mb-4 cursor-pointer hover:text-[#F8D830] transition-colors"
+      <button className="start-actions text-white text-base sm:text-xl font-bold mb-2 sm:mb-4 cursor-pointer hover:text-[#F4DB70] transition-colors relative z-10"
         onClick={() => onStart(1)}
         style={{ textShadow: '2px 2px 0 #000', animation: 'pulse 1s infinite' }}
       >
         ▶ PRESS START ◀
-      </div>
+      </button>
 
-      <div className="bg-black/50 p-4 rounded-lg mb-4">
-        <div className="text-white text-center mb-2" style={{ textShadow: '1px 1px 0 #000' }}>SELECT WORLD</div>
-        <div className="flex flex-col gap-4 items-center">
-          <div className="flex gap-4">
+      <div className="start-actions bg-[#10172E]/80 border border-[#28D9CF]/50 p-2 sm:p-4 rounded-lg mb-2 sm:mb-4 relative z-10">
+        <div className="text-white text-center mb-2" style={{ textShadow: '1px 1px 0 #000' }}>SELECT SECTOR</div>
+        <div className="flex flex-col gap-2 sm:gap-4 items-center">
+          <div className="flex gap-2 sm:gap-4">
             {[1, 2, 3].map(lvl => (
               <button key={lvl} onClick={() => onStart(lvl)}
-                className="bg-[#C84C0C] hover:bg-[#E8A060] text-white font-bold px-6 py-3 border-4 border-[#000] transition-colors"
+                className="bg-[#6756B8] hover:bg-[#8878D7] text-white font-bold px-3 py-1 sm:px-6 sm:py-3 border-4 border-[#17243F] transition-colors"
                 style={{ textShadow: '1px 1px 0 #000' }}>
                 {lvl}-1
               </button>
             ))}
           </div>
           <button onClick={onEnterEditor}
-            className="flex items-center gap-2 bg-[#00A800] hover:bg-[#00C800] text-white font-bold px-8 py-3 border-4 border-[#000] transition-colors"
+            className="flex items-center gap-2 bg-[#137F87] hover:bg-[#28D9CF] text-white font-bold px-4 py-1 sm:px-8 sm:py-3 border-4 border-[#17243F] transition-colors"
             style={{ textShadow: '1px 1px 0 #000' }}>
             <Hammer className="w-5 h-5" /> LEVEL CREATOR
           </button>
         </div>
       </div>
 
-      <div className="text-white text-center text-sm relative z-10 pb-4" style={{ textShadow: '1px 1px 0 #000' }}>
+      <div className="text-white text-center text-xs sm:text-sm relative z-10 pb-2 sm:pb-4" style={{ textShadow: '1px 1px 0 #000' }}>
         <p className="mb-1">← → MOVE    ↑/SPACE JUMP</p>
-        <p className="text-[#F8D830]">STOMP GOOMBAS • COLLECT COINS • REACH THE FLAG!</p>
+        <p className="text-[#F4DB70]">BOUNCE OFF PEBBLITS • GATHER STARS • REACH THE BEACON!</p>
       </div>
-
-      <div className="absolute bottom-0 left-0 right-0 h-16 bg-[#C84C0C]" />
-      <div className="absolute bottom-12 left-0 right-0 h-4 bg-[#00A800]" />
     </div>
   );
 }
