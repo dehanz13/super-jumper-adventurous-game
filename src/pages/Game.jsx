@@ -8,14 +8,11 @@ import { drawCreature, drawExplorer } from '@/game/characterArt';
 import { PLASMA_COOLDOWN_STEPS, WARDEN_JUMP_INTERVAL_STEPS, resolvePlasmaHit } from '@/game/combat';
 import { drawBeacon, drawPickup, drawSpaceBackdrop, drawStarShard, drawTerrain } from '@/game/worldArt';
 import { alignGroundEnemy, beaconFinishBounds, createEditorCreature, creatureHurtbox, isStomp, playerHurtbox } from '@/game/geometry';
-import { DIRECTION_KEYS, directionAtPoint } from '@/game/input';
+import { DIRECTION_KEYS, directionAtPoint, readGameplayInput } from '@/game/input';
 import { getLevelData, hasNextLevel } from '@/game/levels';
 import { takeFixedSteps } from '@/game/fixedStep';
 import { pointsForEvent } from '@/game/scoring';
-
-const GRAVITY = 0.6;
-const JUMP_FORCE = -14;
-const MOVE_SPEED = 5;
+import { GRAVITY, JUMP_FORCE, stepPlayerPhysics } from '@/game/playerPhysics';
 
 export default function Game() {
   const canvasRef = useRef(null);
@@ -282,94 +279,48 @@ export default function Game() {
     for (let step = 0; step < stepCount; step++) {
     if (runEndedRef.current) break;
 
-    // Handle input
-    if (keysRef.current['ArrowLeft'] || keysRef.current['KeyA']) {
-      player.velocityX = -MOVE_SPEED;
-      player.facingRight = false;
-    } else if (keysRef.current['ArrowRight'] || keysRef.current['KeyD']) {
-      player.velocityX = MOVE_SPEED;
-      player.facingRight = true;
-    } else {
-      player.velocityX *= 0.8;
-    }
+    const input = readGameplayInput(keysRef.current);
+    const movement = stepPlayerPhysics(player, input, world.platforms);
+    Object.assign(player, movement.player);
+    if (movement.jumped) soundController.playJump();
+    movement.headHits.forEach(index => {
+      const platform = world.platforms[index];
+      if (platform.type === 'question') {
+        if (!platform.isUsed) {
+          platform.isUsed = true;
+          platform.bounceY = -10;
 
-    if ((keysRef.current['ArrowUp'] || keysRef.current['KeyW'] || keysRef.current['Space']) && player.onGround) {
-      player.velocityY = JUMP_FORCE;
-      player.onGround = false;
-      player.isJumping = true;
-      soundController.playJump();
-    }
+          const foundPowerUp = world.powerUps.find(p =>
+            !p.spawned &&
+            p.x >= platform.x && p.x < platform.x + platform.width &&
+            p.y <= platform.y && p.y >= platform.y - 50
+          );
 
-    // Apply gravity
-    player.velocityY += GRAVITY;
-
-    // Update position
-    player.x += player.velocityX;
-    player.y += player.velocityY;
-
-    // Platform collision
-    const wasOnGround = player.onGround;
-    player.onGround = false;
-    world.platforms.forEach(platform => {
-      if (checkCollision(player, platform)) {
-        // Landing on top
-        if (player.velocityY > 0 && player.y + player.height - player.velocityY <= platform.y) {
-          player.y = platform.y - player.height;
-          player.velocityY = 0;
-          player.onGround = true;
-          player.isJumping = false;
-        }
-        // Hitting from below
-        else if (player.velocityY < 0 && player.y - player.velocityY >= platform.y + platform.height) {
-          player.y = platform.y + platform.height;
-          player.velocityY = 0;
-
-          if (platform.type === 'question') {
-              if (!platform.isUsed) {
-                  platform.isUsed = true;
-                  platform.bounceY = -10;
-
-                  // Check for powerups in this block
-                  const foundPowerUp = world.powerUps.find(p =>
-                      !p.spawned &&
-                      p.x >= platform.x && p.x < platform.x + platform.width &&
-                      p.y <= platform.y && p.y >= platform.y - 50
-                  );
-
-                  if (foundPowerUp) {
-                      foundPowerUp.spawned = true;
-                      foundPowerUp.velocityY = -8; // Pop up
-                      foundPowerUp.y = platform.y - 30; // Ensure it starts above
-                      soundController.playPowerUp();
-                  } else {
-                      // Coin pop
-                      world.effects.push({
-                          x: platform.x + platform.width / 2,
-                          y: platform.y,
-                          type: 'coin_pop',
-                          frame: 0
-                      });
-                      setScore(s => s + pointsForEvent('blockShard'));
-                      soundController.playCoin();
-                  }
-              } else {
-                  soundController.playBump();
-              }
-          } else if (platform.type === 'brick') {
-            platform.bounceY = -5;
-            soundController.playBump();
+          if (foundPowerUp) {
+            foundPowerUp.spawned = true;
+            foundPowerUp.velocityY = -8;
+            foundPowerUp.y = platform.y - 30;
+            soundController.playPowerUp();
+          } else {
+            world.effects.push({
+              x: platform.x + platform.width / 2,
+              y: platform.y,
+              type: 'coin_pop',
+              frame: 0,
+            });
+            setScore(s => s + pointsForEvent('blockShard'));
+            soundController.playCoin();
           }
+        } else {
+          soundController.playBump();
         }
-        // Side collision
-        else if (player.velocityX > 0) {
-          player.x = platform.x - player.width;
-        } else if (player.velocityX < 0) {
-          player.x = platform.x + platform.width;
-        }
+      } else if (platform.type === 'brick') {
+        platform.bounceY = -5;
+        soundController.playBump();
       }
     });
 
-    if (player.onGround && !wasOnGround) soundController.playLand();
+    if (movement.landed) soundController.playLand();
 
     // Coin collection
     world.coins.forEach(coin => {
@@ -467,7 +418,7 @@ export default function Game() {
 
     // Fireball shooting (press X or Z key)
     if (player.fireballCooldown > 0) player.fireballCooldown--;
-    if ((keysRef.current['KeyX'] || keysRef.current['KeyZ']) && player.powerUp === 'plasma' && player.fireballs.length < 2) {
+    if (input.fire && player.powerUp === 'plasma' && player.fireballs.length < 2) {
       if (player.fireballCooldown === 0) {
         player.fireballs.push({
           x: player.x + (player.facingRight ? 40 : 0),
