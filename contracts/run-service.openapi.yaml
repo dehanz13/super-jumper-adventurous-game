@@ -19,10 +19,12 @@ paths:
       operationId: startRun
       summary: Start a ranked campaign attempt
       description: >-
-        The server issues a single-use run ID and secret, pins the map, rules,
+        The server issues a run ID and secret, pins the map, rules,
         and scoring versions, and records its own start time. A valid signed
         Hearso launch ticket may identify an account; absent that, a guest
-        profile is required. The caller cannot choose account status or boards.
+        profile is required. Only one finish payload may be accepted for a run;
+        the secret also authenticates result reads until record cleanup. The
+        caller cannot choose account status or boards.
       requestBody:
         required: true
         content:
@@ -111,7 +113,7 @@ components:
     RunToken:
       type: http
       scheme: bearer
-      description: Opaque, short-lived, per-run secret issued by startRun.
+      description: Opaque per-run secret issued by startRun; never stored in plaintext.
   parameters:
     RunId:
       name: runId
@@ -182,6 +184,7 @@ components:
         expiresAt:
           type: string
           format: date-time
+          description: Deadline for finishing gameplay, not the result-read retention limit.
         versions:
           $ref: '#/components/schemas/Versions'
     FinishRunRequest:

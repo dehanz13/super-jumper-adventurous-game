@@ -7,6 +7,14 @@ import pluginUnusedImports from "eslint-plugin-unused-imports";
 export default [
   { ignores: ["dist/**", "coverage/**"] },
   {
+    files: ["src/server/**/*.js"],
+    ...pluginJs.configs.recommended,
+    languageOptions: {
+      globals: globals.node,
+      parserOptions: { ecmaVersion: 2022, sourceType: "module" },
+    },
+  },
+  {
     files: [
       "src/components/**/*.{js,mjs,cjs,jsx}",
       "src/pages/**/*.{js,mjs,cjs,jsx}",

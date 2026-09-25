@@ -11,7 +11,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "typecheck": "tsc -p ./jsconfig.json",
+    "typecheck": "tsc -p ./jsconfig.json && tsc -p ./jsconfig.server.json",
     "preview": "vite preview"
   },
   "dependencies": {
