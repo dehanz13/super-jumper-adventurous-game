@@ -21,8 +21,10 @@ paths:
       description: >-
         The server issues a run ID and secret, pins the map, rules,
         and scoring versions, and records its own start time. A valid signed
-        Hearso launch ticket may identify an account; absent that, a guest
-        profile is required. Only one finish payload may be accepted for a run;
+        Hearso launch ticket may identify an account. A new guest supplies a
+        profile and receives a week-scoped guest credential; a returning guest
+        supplies that credential to reuse the same weekly identity. Only one
+        finish payload may be accepted for a run;
         the secret also authenticates result reads until record cleanup. The
         caller cannot choose account status or boards.
       requestBody:
@@ -33,7 +35,9 @@ paths:
               $ref: '#/components/schemas/StartRunRequest'
       responses:
         '201':
-          description: Run created. The token must be kept in memory, never in a URL.
+          description: >-
+            Run created. Keep the run token in memory and a newly issued guest
+            credential in private browser storage; neither belongs in a URL.
           headers:
             Cache-Control:
               schema:
@@ -44,6 +48,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/StartRunResponse'
         '400':
+          $ref: '#/components/responses/Problem'
+        '401':
           $ref: '#/components/responses/Problem'
         '429':
           $ref: '#/components/responses/Problem'
@@ -136,13 +142,22 @@ components:
       oneOf:
         - required: [launchTicket]
         - required: [guestProfile]
+        - required: [guestCredential]
       properties:
         launchTicket:
           type: string
           description: Signed, one-time Hearso identity handoff; issuer contract pending.
         guestProfile:
           $ref: '#/components/schemas/GuestProfile'
-      description: Exactly one of launchTicket or guestProfile is required.
+        guestCredential:
+          type: string
+          minLength: 32
+          maxLength: 128
+          pattern: '^[A-Za-z0-9_-]{32,128}$'
+          description: >-
+            Opaque credential issued on a prior guest start in the same UTC
+            calendar week. It is not the per-run bearer token.
+      description: Exactly one identity input is required.
     GuestProfile:
       type: object
       additionalProperties: false
@@ -187,6 +202,20 @@ components:
           description: Deadline for finishing gameplay, not the result-read retention limit.
         versions:
           $ref: '#/components/schemas/Versions'
+        guestCredential:
+          type: string
+          minLength: 32
+          maxLength: 128
+          pattern: '^[A-Za-z0-9_-]{32,128}$'
+          description: >-
+            Present only when a new guest identity is created. Store privately
+            for later attempts in this week; never log or place in a URL.
+        guestCredentialExpiresAt:
+          type: string
+          format: date-time
+          description: >-
+            Present with guestCredential. At this UTC Monday boundary a new
+            guest identity is required for the next calendar week.
     FinishRunRequest:
       type: object
       additionalProperties: false

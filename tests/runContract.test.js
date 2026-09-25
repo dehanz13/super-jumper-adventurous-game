@@ -33,6 +33,16 @@ describe('run service contract', () => {
     expect(Transcript.properties.mode.enum).toEqual(['campaign']);
     expect(Transcript.properties.endedAs.enum).toEqual(['win']);
     expect(Versions.required).toEqual(Object.keys(currentRunVersions()));
-    expect(StartRunRequest.oneOf).toEqual([{ required: ['launchTicket'] }, { required: ['guestProfile'] }]);
+    expect(StartRunRequest.oneOf).toEqual([
+      { required: ['launchTicket'] },
+      { required: ['guestProfile'] },
+      { required: ['guestCredential'] },
+    ]);
+    expect(contract.paths['/runs'].post.responses['401']).toBeDefined();
+    const guestInput = StartRunRequest.properties.guestCredential;
+    const guestOutput = contract.components.schemas.StartRunResponse.properties.guestCredential;
+    expect(guestInput.pattern).toBe('^[A-Za-z0-9_-]{32,128}$');
+    expect(guestOutput.pattern).toBe(guestInput.pattern);
+    expect(guestOutput.maxLength).toBe(guestInput.maxLength);
   });
 });
