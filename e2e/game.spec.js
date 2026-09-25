@@ -105,6 +105,7 @@ test('mobile controls are available for touch', async ({ page, isMobile }) => {
   await expect(page.getByRole('button', { name: 'Jump A' })).toBeVisible();
   await page.getByRole('button', { name: 'Jump A' }).tap();
   await expect(page.locator('canvas')).toBeVisible();
+  expect(await page.locator('canvas').evaluate(canvas => canvas.getBoundingClientRect().width)).toBeGreaterThanOrEqual(680);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.screenshot({ path: 'test-results/mobile-page.png', fullPage: true });
 });
