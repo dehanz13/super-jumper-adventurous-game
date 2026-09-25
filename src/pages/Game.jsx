@@ -10,6 +10,7 @@ import { drawBeacon, drawPickup, drawSpaceBackdrop, drawStarShard, drawTerrain }
 import { alignGroundEnemy, createEditorCreature, creatureHurtbox, isStomp, playerHurtbox } from '@/game/geometry';
 import { DIRECTION_KEYS, directionAtPoint } from '@/game/input';
 import { getLevelData, hasNextLevel } from '@/game/levels';
+import { takeFixedSteps } from '@/game/fixedStep';
 
 const GRAVITY = 0.6;
 const JUMP_FORCE = -14;
@@ -21,6 +22,9 @@ export default function Game() {
   const keysRef = useRef({});
   const directionPointerRef = useRef(null);
   const jumpPointersRef = useRef(new Set());
+  const simulationClockRef = useRef({ lastTimestamp: null, accumulator: 0 });
+  const livesRef = useRef(3);
+  const runEndedRef = useRef(false);
 
   const [gameState, setGameState] = useState('intro'); // intro, start, playing, paused, gameover, win
   const [introPhase, setIntroPhase] = useState(0);
@@ -72,6 +76,7 @@ export default function Game() {
   const initLevel = useCallback(
     /** @param {number | 'custom'} levelNum */
     (levelNum = 1) => {
+    runEndedRef.current = false;
     let levelData;
     if (levelNum === 'custom') {
       levelData = customLevelRef.current || {
@@ -190,7 +195,32 @@ export default function Game() {
            rect1.y + rect1.height > rect2.y;
   };
 
-  const gameLoop = useCallback(() => {
+  const loseLife = useCallback(() => {
+    if (runEndedRef.current) return;
+    const remaining = livesRef.current - 1;
+    livesRef.current = remaining;
+    setLives(remaining);
+    if (remaining <= 0) {
+      runEndedRef.current = true;
+      setGameState('gameover');
+      soundController.playDie();
+      return;
+    }
+
+    const player = playerRef.current;
+    player.x = 100;
+    player.y = 300;
+    player.velocityX = 0;
+    player.velocityY = 0;
+    player.powerUp = 'small';
+    player.height = 50;
+    player.isInvincible = true;
+    player.invincibleTimer = 90;
+    worldRef.current.offset = 0;
+    soundController.playDamage();
+  }, []);
+
+  const gameLoop = useCallback((timestamp) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -246,6 +276,10 @@ export default function Game() {
         gameLoopRef.current = requestAnimationFrame(gameLoop);
         return;
     }
+
+    const stepCount = takeFixedSteps(simulationClockRef.current, timestamp);
+    for (let step = 0; step < stepCount; step++) {
+    if (runEndedRef.current) break;
 
     // Handle input
     if (keysRef.current['ArrowLeft'] || keysRef.current['KeyA']) {
@@ -497,17 +531,7 @@ export default function Game() {
             player.invincibleTimer = 120;
             soundController.playDamage();
           } else {
-            setLives(l => {
-              const newLives = l - 1;
-              if (newLives <= 0) {
-                  setGameState('gameover');
-                  soundController.playDie();
-              } else {
-                  player.x = 100; player.y = 300; player.velocityX = 0; player.velocityY = 0; player.powerUp = 'small'; player.height = 50; world.offset = 0;
-                  soundController.playDamage();
-              }
-              return newLives;
-            });
+            loseLife();
           }
       }
 
@@ -539,12 +563,7 @@ export default function Game() {
                 player.invincibleTimer = 120;
                 soundController.playDamage();
               } else {
-                setLives(l => {
-                  const newLives = l - 1;
-                  if (newLives <= 0) { setGameState('gameover'); soundController.playDie(); }
-                  else { player.x = 100; player.y = 300; player.velocityX = 0; player.velocityY = 0; player.powerUp = 'small'; player.height = 50; world.offset = 0; soundController.playDamage(); }
-                  return newLives;
-                });
+                loseLife();
               }
             }
           }
@@ -659,12 +678,7 @@ export default function Game() {
                     player.invincibleTimer = 120;
                     soundController.playDamage();
                 } else {
-                    setLives(l => {
-                        const newLives = l - 1;
-                        if (newLives <= 0) { setGameState('gameover'); soundController.playDie(); }
-                        else { player.x = 100; player.y = 300; player.velocityX = 0; player.velocityY = 0; player.powerUp = 'small'; player.height = 50; world.offset = 0; soundController.playDamage(); }
-                        return newLives;
-                    });
+                    loseLife();
                 }
              }
           }
@@ -738,18 +752,7 @@ export default function Game() {
                 player.invincibleTimer = 120;
                 soundController.playDamage();
               } else {
-                setLives(l => {
-                  const newLives = l - 1;
-                  if (newLives <= 0) {
-                      setGameState('gameover');
-                      soundController.playDie();
-                  }
-                  else {
-                      player.x = 100; player.y = 300; player.velocityX = 0; player.velocityY = 0; player.powerUp = 'small'; player.height = 50; world.offset = 0;
-                      soundController.playDamage();
-                  }
-                  return newLives;
-                });
+                loseLife();
               }
             }
           } else if (enemy.type === 'rollpod') {
@@ -786,18 +789,7 @@ export default function Game() {
                 player.invincibleTimer = 120;
                 soundController.playDamage();
               } else {
-                setLives(l => {
-                  const newLives = l - 1;
-                  if (newLives <= 0) {
-                      setGameState('gameover');
-                      soundController.playDie();
-                  }
-                  else {
-                      player.x = 100; player.y = 300; player.velocityX = 0; player.velocityY = 0; player.powerUp = 'small'; player.height = 50; world.offset = 0;
-                      soundController.playDamage();
-                  }
-                  return newLives;
-                });
+                loseLife();
               }
             }
           } else {
@@ -819,18 +811,7 @@ export default function Game() {
                 player.invincibleTimer = 120;
                 soundController.playDamage();
               } else {
-                setLives(l => {
-                  const newLives = l - 1;
-                  if (newLives <= 0) {
-                      setGameState('gameover');
-                      soundController.playDie();
-                  }
-                  else {
-                      player.x = 100; player.y = 300; player.velocityX = 0; player.velocityY = 0; player.powerUp = 'small'; player.height = 50; world.offset = 0;
-                      soundController.playDamage();
-                  }
-                  return newLives;
-                });
+                loseLife();
               }
             }
           }
@@ -843,6 +824,7 @@ export default function Game() {
 
     // Flag (win condition)
     if (world.flag && checkCollision(player, world.flag)) {
+      runEndedRef.current = true;
       soundController.playStageClear();
       if (hasNextLevel(level)) {
         // Next level
@@ -856,26 +838,13 @@ export default function Game() {
 
     // Fall death
     if (player.y > 700) {
-      setLives(l => {
-        const newLives = l - 1;
-        if (newLives <= 0) {
-          setGameState('gameover');
-          soundController.playDie();
-        } else {
-          player.x = 100;
-          player.y = 300;
-          player.velocityX = 0;
-          player.velocityY = 0;
-          world.offset = 0;
-          soundController.playDamage();
-        }
-        return newLives;
-      });
+      loseLife();
     }
 
     // Camera follow
     const targetOffset = player.x - 300;
     world.offset = Math.max(0, Math.min(targetOffset, world.maxOffset || 2600));
+    }
 
     // Draw everything
     drawSpaceBackdrop(ctx, world.offset, level);
@@ -904,7 +873,7 @@ export default function Game() {
     drawExplorer(ctx, player, world.offset);
 
     gameLoopRef.current = requestAnimationFrame(gameLoop);
-  }, [gameState, level, selectedTool, showGrid]);
+  }, [gameState, level, selectedTool, showGrid, loseLife]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -937,6 +906,7 @@ export default function Game() {
 
   useEffect(() => {
     if (gameState === 'playing' || gameState === 'editor') {
+      simulationClockRef.current = { lastTimestamp: null, accumulator: 0 };
       gameLoopRef.current = requestAnimationFrame(gameLoop);
     } else {
       if (gameLoopRef.current) {
@@ -1074,6 +1044,7 @@ export default function Game() {
     setScore(0);
     setShards(0);
     setLives(3);
+    livesRef.current = 3;
     setGameState('playing');
   };
 
