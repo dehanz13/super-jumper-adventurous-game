@@ -19,4 +19,12 @@ describe('playable level registry', () => {
     expect(() => getLevelData(4)).toThrow(RangeError);
     expect(() => getLevelData(1.5)).toThrow(RangeError);
   });
+
+  it('keeps the introductory ground route open through its beacon', () => {
+    const level = getLevelData(1);
+    const ground = level.platforms.filter(platform => platform.type === 'ground');
+    expect(ground).toHaveLength(1);
+    expect(ground[0].x).toBeLessThanOrEqual(100);
+    expect(ground[0].x + ground[0].width).toBeGreaterThan(level.flag.x);
+  });
 });

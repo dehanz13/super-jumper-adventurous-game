@@ -6,7 +6,7 @@ const { positions } = vi.hoisted(() => ({ positions: [] }));
 
 vi.mock('../src/game/characterArt', () => ({
   drawCreature: vi.fn(),
-  drawExplorer: vi.fn((_ctx, player) => positions.push(player.x)),
+  drawExplorer: vi.fn((_ctx, player) => positions.push({ x: player.x, y: player.y })),
 }));
 
 vi.mock('../src/components/SoundController', () => ({
@@ -19,7 +19,7 @@ describe('game simulation speed', () => {
     vi.unstubAllGlobals();
   });
 
-  function distanceAfterFrames(refreshRate, frameCount) {
+  function runForFrames(refreshRate, frameCount, { jump = false } = {}) {
     const frames = new Map();
     let nextId = 0;
     positions.length = 0;
@@ -41,6 +41,7 @@ describe('game simulation speed', () => {
     fireEvent.click(screen.getByText(/skip/i));
     fireEvent.click(screen.getByRole('button', { name: /press start/i }));
     fireEvent.keyDown(window, { code: 'ArrowRight' });
+    if (jump) fireEvent.keyDown(window, { code: 'Space' });
     act(() => {
       for (let i = 1; i <= frameCount; i++) {
         const [id, callback] = frames.entries().next().value;
@@ -49,19 +50,30 @@ describe('game simulation speed', () => {
       }
     });
     fireEvent.keyUp(window, { code: 'ArrowRight' });
-    const distance = positions.at(-1) - 100;
+    if (jump) fireEvent.keyUp(window, { code: 'Space' });
+    const result = {
+      x: positions.at(-1).x,
+      lives: screen.getByText('LIVES').parentElement.textContent,
+      clear: Boolean(screen.queryByText('COURSE CLEAR!')),
+      gameOver: Boolean(screen.queryByText('GAME OVER')),
+    };
     view.unmount();
     cleanup();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
-    return distance;
+    return result;
   }
 
   it('keeps movement consistent over 333 ms at 30, 60, and 120 Hz', () => {
-    const at30Hz = distanceAfterFrames(30, 10);
-    const at60Hz = distanceAfterFrames(60, 20);
-    const at120Hz = distanceAfterFrames(120, 40);
+    const at30Hz = runForFrames(30, 10).x - 100;
+    const at60Hz = runForFrames(60, 20).x - 100;
+    const at120Hz = runForFrames(120, 40).x - 100;
     expect(at120Hz).toBeCloseTo(at60Hz, 0);
     expect(Math.abs(at30Hz - at60Hz)).toBeLessThanOrEqual(5);
+  });
+
+  it('can complete the first course with normal controls', () => {
+    const run = runForFrames(60, 900, { jump: true });
+    expect(run.clear, JSON.stringify(run)).toBe(true);
   });
 });
