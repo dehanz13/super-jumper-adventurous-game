@@ -348,6 +348,23 @@ describe('game entry and first frame', () => {
     expect(soundController.playStomp).not.toHaveBeenCalled();
   });
 
+  it('spaces plasma shots by simulation steps while wall time stands still', () => {
+    const canvas = openEditor();
+    paint(canvas, 'Plasma Core', 96, 320);
+    fireEvent.click(screen.getByRole('button', { name: /test/i }));
+    stepFrames(1);
+    vi.spyOn(Date, 'now').mockReturnValue(1000);
+
+    fireEvent.keyDown(window, { code: 'KeyX' });
+    stepFrames(1);
+    expect(soundController.playFireball).toHaveBeenCalledTimes(1);
+    stepFrames(17);
+    expect(soundController.playFireball).toHaveBeenCalledTimes(1);
+    stepFrames(1);
+    expect(soundController.playFireball).toHaveBeenCalledTimes(2);
+    fireEvent.keyUp(window, { code: 'KeyX' });
+  });
+
   it('retracts a rollpod when a plasma shot hits it', () => {
     const canvas = openEditor();
     paint(canvas, 'Plasma Core', 96, 320);

@@ -5,7 +5,7 @@ import { soundController } from "@/components/SoundController";
 import { GameOverScreen, WinScreen, StartScreen } from '@/components/GameScreens';
 import IntroScreen from '@/components/IntroScreen';
 import { drawCreature, drawExplorer } from '@/game/characterArt';
-import { resolvePlasmaHit } from '@/game/combat';
+import { PLASMA_COOLDOWN_STEPS, WARDEN_JUMP_INTERVAL_STEPS, resolvePlasmaHit } from '@/game/combat';
 import { drawBeacon, drawPickup, drawSpaceBackdrop, drawStarShard, drawTerrain } from '@/game/worldArt';
 import { alignGroundEnemy, beaconFinishBounds, createEditorCreature, creatureHurtbox, isStomp, playerHurtbox } from '@/game/geometry';
 import { DIRECTION_KEYS, directionAtPoint } from '@/game/input';
@@ -56,7 +56,7 @@ export default function Game() {
     isInvincible: false,
     invincibleTimer: 0,
     starTimer: 0,
-    lastFireball: 0,
+    fireballCooldown: 0,
     fireballs: []
   });
 
@@ -126,7 +126,7 @@ export default function Game() {
       isInvincible: false,
       invincibleTimer: 0,
       starTimer: 0,
-      lastFireball: 0,
+      fireballCooldown: 0,
       fireballs: []
     };
     }, []);
@@ -466,15 +466,16 @@ export default function Game() {
     }
 
     // Fireball shooting (press X or Z key)
+    if (player.fireballCooldown > 0) player.fireballCooldown--;
     if ((keysRef.current['KeyX'] || keysRef.current['KeyZ']) && player.powerUp === 'plasma' && player.fireballs.length < 2) {
-      if (!player.lastFireball || Date.now() - player.lastFireball > 300) {
+      if (player.fireballCooldown === 0) {
         player.fireballs.push({
           x: player.x + (player.facingRight ? 40 : 0),
           y: player.y + 20,
           velocityX: player.facingRight ? 8 : -8,
           velocityY: 0
         });
-        player.lastFireball = Date.now();
+        player.fireballCooldown = PLASMA_COOLDOWN_STEPS;
         soundController.playFireball();
       }
     }
@@ -614,7 +615,7 @@ export default function Game() {
           if (Math.abs(player.x - enemy.x) < 600) { // Only active when close
              // Jump logic
              enemy.jumpTimer++;
-             if (enemy.jumpTimer > 120 + Math.random() * 100 && enemy.onGround) {
+             if (enemy.jumpTimer >= WARDEN_JUMP_INTERVAL_STEPS && enemy.onGround) {
                 enemy.velocityY = -10;
                 enemy.onGround = false;
                 enemy.jumpTimer = 0;

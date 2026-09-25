@@ -1,5 +1,8 @@
 import { pointsForEvent } from './scoring';
 
+export const PLASMA_COOLDOWN_STEPS = 18;
+export const WARDEN_JUMP_INTERVAL_STEPS = 170;
+
 const PLASMA_IMMUNE = new Set(['prismite', 'signalSnare', 'hovermite']);
 
 export function resolvePlasmaHit(enemy) {
