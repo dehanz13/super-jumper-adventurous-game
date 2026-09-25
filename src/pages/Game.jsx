@@ -5,18 +5,13 @@ import { soundController } from "@/components/SoundController";
 import { GameOverScreen, WinScreen, StartScreen } from '@/components/GameScreens';
 import IntroScreen from '@/components/IntroScreen';
 import { drawCreature, drawExplorer } from '@/game/characterArt';
-import { resolvePlayerEnemyContact } from '@/game/combat';
-import { stepEnemyProjectile, stepPlayerPlasma, tryFirePlasma } from '@/game/projectiles';
-import { isSignalSnareActive, stepEnemyMotion } from '@/game/enemyMotion';
-import { collectShards, resolveBlockHit, stepPowerUps } from '@/game/collectibles';
 import { drawBeacon, drawPickup, drawSpaceBackdrop, drawStarShard, drawTerrain } from '@/game/worldArt';
-import { createEditorCreature, creatureHurtbox, playerHurtbox, rectanglesOverlap as checkCollision } from '@/game/geometry';
+import { createEditorCreature } from '@/game/geometry';
 import { DIRECTION_KEYS, directionAtPoint, readGameplayInput } from '@/game/input';
 import { appendInputStep, createInputTranscript, sealInputTranscript } from '@/game/inputTranscript';
 import { takeFixedSteps } from '@/game/fixedStep';
-import { stepPlayerPhysics } from '@/game/playerPhysics';
-import { resolveCourseClear, resolveLifeLoss } from '@/game/runProgress';
-import { createScoreLedger, recordScoreEvent } from '@/game/scoreLedger';
+import { createScoreLedger } from '@/game/scoreLedger';
+import { advanceSimulation } from '@/game/simulation';
 import { createEmptyWorldState, createInitialLevelState, createPlayerState } from '@/game/worldState';
 
 export default function Game() {
@@ -39,11 +34,6 @@ export default function Game() {
   const [lives, setLives] = useState(3);
   const [level, setLevel] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
-
-  const recordAward = useCallback((event, count = 1) => {
-    const total = recordScoreEvent(scoreLedgerRef.current, event, count, level, runStepRef.current);
-    setScore(total);
-  }, [level]);
 
   // Editor state
   const [selectedTool, setSelectedTool] = useState('brush'); // brush, eraser, hand
@@ -121,19 +111,6 @@ export default function Game() {
     ctx.restore();
   };
 
-  const loseLife = useCallback(() => {
-    if (runEndedRef.current) return;
-    const outcome = resolveLifeLoss(livesRef.current, playerRef.current, worldRef.current);
-    livesRef.current = outcome.remainingLives;
-    setLives(outcome.remainingLives);
-    if (outcome.state === 'gameover') {
-      runEndedRef.current = true;
-      sealInputTranscript(inputTranscriptRef.current, 'gameover');
-      setGameState('gameover');
-    }
-    soundController[outcome.sound]();
-  }, []);
-
   const gameLoop = useCallback((timestamp) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -141,13 +118,6 @@ export default function Game() {
     const ctx = canvas.getContext('2d');
     const player = playerRef.current;
     const world = worldRef.current;
-    const applyContactOutcome = outcome => {
-      if (!outcome) return;
-      if (outcome.scoreEvent) recordAward(outcome.scoreEvent);
-      if (outcome.sound) soundController[outcome.sound]();
-      if (outcome.loseLife) loseLife();
-    };
-
     if (gameState === 'editor') {
         // Editor render loop
         drawSpaceBackdrop(ctx, world.offset, 1);
@@ -200,134 +170,26 @@ export default function Game() {
     const stepCount = takeFixedSteps(simulationClockRef.current, timestamp);
     for (let step = 0; step < stepCount; step++) {
     if (runEndedRef.current) break;
-    runStepRef.current++;
-
     const input = readGameplayInput(keysRef.current);
     appendInputStep(inputTranscriptRef.current, input);
-    const movement = stepPlayerPhysics(player, input, world.platforms);
-    Object.assign(player, movement.player);
-    if (movement.jumped) soundController.playJump();
-    movement.headHits.forEach(index => {
-      const platform = world.platforms[index];
-      const outcome = resolveBlockHit(platform, world.powerUps);
-      if (outcome?.kind === 'powerUpReleased') {
-        platform.bounceY = -10;
-        soundController.playPowerUp();
-      } else if (outcome?.kind === 'shardReleased') {
-        platform.bounceY = -10;
-        world.effects.push(outcome.effect);
-        recordAward('blockShard');
-        soundController.playCoin();
-      } else if (outcome?.kind === 'brickBump' || outcome?.kind === 'usedBump') {
-        if (outcome.kind === 'brickBump') platform.bounceY = -5;
-        soundController.playBump();
-      }
-    });
-
-    if (movement.landed) soundController.playLand();
-
-    const collectedShards = collectShards(world.coins, player);
-    if (collectedShards) {
-      setShards(count => count + collectedShards);
-      recordAward('shard', collectedShards);
-      for (let i = 0; i < collectedShards; i++) soundController.playCoin();
-    }
-
-    // Update Effects (visual coins, etc)
-    if (world.effects) {
-        world.effects = world.effects.filter(effect => {
-            effect.frame++;
-            return effect.frame < 30;
-        });
-    }
-
-    // Update platform bounce
-    world.platforms.forEach(p => {
-        if (p.bounceY) {
-            p.bounceY *= 0.8;
-            if (Math.abs(p.bounceY) < 0.5) p.bounceY = 0;
-        }
-    });
-
-    const collectedPowerUps = stepPowerUps(world.powerUps, world.platforms, player);
-    if (collectedPowerUps.length) {
-      recordAward('powerUp', collectedPowerUps.length);
-      collectedPowerUps.forEach(() => soundController.playPowerUp());
-    }
-
-    // Update star timer
-    if (player.starTimer > 0) {
-      player.starTimer--;
-      if (player.starTimer <= 0) {
-        player.isInvincible = false;
-      }
-    }
-
-    // Update invincibility timer (after getting hit)
-    if (player.invincibleTimer > 0) {
-      player.invincibleTimer--;
-      if (player.invincibleTimer <= 0) {
-        player.isInvincible = false;
-      }
-    }
-
-    if (tryFirePlasma(player, input.fire)) soundController.playFireball();
-    stepPlayerPlasma(player, world.platforms, world.enemies, world.offset).forEach(outcome => {
-      if (outcome.scoreEvent) recordAward(outcome.scoreEvent);
-      if (outcome.sound) soundController[outcome.sound]();
-    });
-
-    world.enemyProjectiles = (world.enemyProjectiles || []).filter(projectile => {
-      const outcome = stepEnemyProjectile(projectile, player, world.offset);
-      applyContactOutcome(outcome.contact);
-      return outcome.keep;
-    });
-
-    // Advance each creature, then resolve player contact at its new position.
-    world.enemies.forEach(enemy => {
-      if (!enemy.alive) return;
-      const outcome = stepEnemyMotion(enemy, player, world.platforms, world.enemies);
-      if (outcome.spawnedEnemy) world.enemies.push(outcome.spawnedEnemy);
-      if (outcome.projectile) {
-        world.enemyProjectiles.push(outcome.projectile);
-        soundController.playFireball();
-      }
-      if (outcome.shellDefeats) {
-        recordAward('creatureDefeat', outcome.shellDefeats);
-        for (let i = 0; i < outcome.shellDefeats; i++) soundController.playKick();
-      }
-
-      if (enemy.type === 'signalSnare') {
-        if (isSignalSnareActive(enemy)) {
-          const body = { x: enemy.x, y: enemy.baseY - 20, width: 48, height: 50 };
-          if (checkCollision(playerHurtbox(player), body)) {
-            applyContactOutcome(resolvePlayerEnemyContact(player, enemy));
-          }
-        }
-        return;
-      }
-
-      if (checkCollision(playerHurtbox(player), creatureHurtbox(enemy))) {
-        applyContactOutcome(resolvePlayerEnemyContact(player, enemy));
-      }
-    });
-
-    // Remove enemies that fall off screen
-    world.enemies = world.enemies.filter(e => e.y < 700 && e.alive);
-
-    const clear = resolveCourseClear(player, world.flag, level, runEndedRef.current);
-    if (clear) {
-      runEndedRef.current = true;
-      recordAward(clear.scoreEvent);
-      soundController[clear.sound]();
-      if (clear.nextLevel) setLevel(clear.nextLevel);
-      else sealInputTranscript(inputTranscriptRef.current, 'win');
-      setGameState(clear.state);
-    }
-
-    // Fall death
-    if (player.y > 700) {
-      loseLife();
+    const simulation = {
+      player, world, lives: livesRef.current, level,
+      step: runStepRef.current, runEnded: runEndedRef.current,
+      ledger: scoreLedgerRef.current,
+    };
+    const result = advanceSimulation(simulation, input);
+    runStepRef.current = simulation.step;
+    livesRef.current = simulation.lives;
+    runEndedRef.current = simulation.runEnded;
+    if (result.scoreChanged) setScore(simulation.ledger.total);
+    if (result.shardsCollected) setShards(count => count + result.shardsCollected);
+    if (result.livesChanged) setLives(simulation.lives);
+    result.sounds.forEach(sound => soundController[sound]());
+    if (result.transition) {
+      if (result.transition.nextLevel) setLevel(result.transition.nextLevel);
+      if (result.transition.state === 'win') sealInputTranscript(inputTranscriptRef.current, 'win');
+      if (result.transition.state === 'gameover') sealInputTranscript(inputTranscriptRef.current, 'gameover');
+      setGameState(result.transition.state);
     }
 
     // Follow the explorer within the portion of the canvas actually visible.
@@ -369,7 +231,7 @@ export default function Game() {
     drawExplorer(ctx, player, world.offset);
 
     gameLoopRef.current = requestAnimationFrame(gameLoop);
-  }, [gameState, level, selectedTool, showGrid, loseLife, recordAward]);
+  }, [gameState, level, selectedTool, showGrid]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
