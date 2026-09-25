@@ -1,11 +1,8 @@
+import { rectanglesOverlap } from './geometry';
+
 export const GRAVITY = 0.6;
 export const JUMP_FORCE = -14;
 const MOVE_SPEED = 5;
-
-function overlaps(a, b) {
-  return a.x < b.x + b.width && a.x + a.width > b.x
-    && a.y < b.y + b.height && a.y + a.height > b.y;
-}
 
 // One simulation step. Rendering and block rewards consume the returned events.
 export function stepPlayerPhysics(player, input, platforms) {
@@ -36,7 +33,7 @@ export function stepPlayerPhysics(player, input, platforms) {
   const wasOnGround = next.onGround;
   next.onGround = false;
   platforms.forEach((platform, index) => {
-    if (!overlaps(next, platform)) return;
+    if (!rectanglesOverlap(next, platform)) return;
 
     if (next.velocityY > 0 && next.y + next.height - next.velocityY <= platform.y) {
       next.y = platform.y - next.height;

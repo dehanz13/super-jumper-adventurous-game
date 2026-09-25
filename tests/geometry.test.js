@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { alignGroundEnemy, beaconFinishBounds, createEditorCreature, creatureHurtbox, isStomp, playerHurtbox, playerSpriteBounds } from '../src/game/geometry';
+import { alignGroundEnemy, beaconFinishBounds, createEditorCreature, creatureHurtbox, isStomp, playerHurtbox, playerSpriteBounds, rectanglesOverlap } from '../src/game/geometry';
 
 describe('player sprite bounds', () => {
   it.each([
@@ -35,6 +35,12 @@ describe('ground enemy placement', () => {
 });
 
 describe('visible contact geometry', () => {
+  it('requires actual overlap rather than touching rectangle edges', () => {
+    const explorer = { x: 100, y: 100, width: 40, height: 50 };
+    expect(rectanglesOverlap(explorer, { x: 139, y: 110, width: 20, height: 20 })).toBe(true);
+    expect(rectanglesOverlap(explorer, { x: 140, y: 110, width: 20, height: 20 })).toBe(false);
+  });
+
   it('keeps walking contact clear until the explorer and pebblit silhouettes meet', () => {
     const player = { x: 100, y: 450, width: 40, height: 50, powerUp: 'small' };
     const body = playerHurtbox(player);
