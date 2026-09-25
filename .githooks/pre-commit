@@ -1,0 +1,12 @@
+#!/bin/sh
+set -eu
+
+if [ -s "$HOME/.nvm/nvm.sh" ]; then
+  . "$HOME/.nvm/nvm.sh"
+  nvm use --silent >/dev/null
+fi
+
+npm run lint
+npm run typecheck
+npm run test:coverage
+npm run build
