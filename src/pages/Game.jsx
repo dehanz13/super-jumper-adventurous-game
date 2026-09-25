@@ -7,7 +7,7 @@ import IntroScreen from '@/components/IntroScreen';
 import { drawCreature, drawExplorer } from '@/game/characterArt';
 import { resolvePlasmaHit } from '@/game/combat';
 import { drawBeacon, drawPickup, drawSpaceBackdrop, drawStarShard, drawTerrain } from '@/game/worldArt';
-import { alignGroundEnemy } from '@/game/geometry';
+import { alignGroundEnemy, createEditorCreature, creatureHurtbox, isStomp, playerHurtbox } from '@/game/geometry';
 import { DIRECTION_KEYS, directionAtPoint } from '@/game/input';
 import { getLevelData, hasNextLevel } from '@/game/levels';
 
@@ -489,7 +489,7 @@ export default function Game() {
 
       // Check collision with player
       const projRect = { x: proj.x, y: proj.y + 10, width: 40, height: 20 };
-      if (checkCollision(player, projRect) && !player.isInvincible && !player.starTimer) {
+      if (checkCollision(playerHurtbox(player), projRect) && !player.isInvincible && !player.starTimer) {
          if (player.powerUp !== 'small') {
             player.powerUp = 'small';
             player.height = 50;
@@ -527,7 +527,7 @@ export default function Game() {
           const popOffset = Math.sin(enemy.timer * 0.05) * 40;
           if (popOffset > 10 && !player.isInvincible) {
             const signalSnareRect = { x: enemy.x, y: enemy.baseY - 20, width: 48, height: 50 };
-            if (checkCollision(player, signalSnareRect)) {
+            if (checkCollision(playerHurtbox(player), signalSnareRect)) {
               if (player.starTimer > 0) {
                 enemy.alive = false;
                 setScore(s => s + 200);
@@ -570,7 +570,7 @@ export default function Game() {
           }
 
           // Hovermite collision
-          if (checkCollision(player, enemy)) {
+          if (checkCollision(playerHurtbox(player), creatureHurtbox(enemy))) {
             if (player.velocityY > 0 && player.y + player.height < enemy.y + 30) {
               enemy.alive = false;
               player.velocityY = JUMP_FORCE / 2;
@@ -639,7 +639,7 @@ export default function Game() {
           }
 
           // Player collision (Body damage)
-          if (checkCollision(player, enemy)) {
+          if (checkCollision(playerHurtbox(player), creatureHurtbox(enemy))) {
              if (player.starTimer > 0 && !enemy.hitTimer) {
                 enemy.hp--;
                 enemy.hitTimer = 10;
@@ -723,7 +723,7 @@ export default function Game() {
         }
 
         // Player collision
-        if (checkCollision(player, enemy)) {
+        if (checkCollision(playerHurtbox(player), creatureHurtbox(enemy))) {
           if (enemy.type === 'prismite') {
             // Prismite hurts on stomp too (unless star power)
             if (player.starTimer > 0) {
@@ -753,7 +753,7 @@ export default function Game() {
               }
             }
           } else if (enemy.type === 'rollpod') {
-            if (player.velocityY > 0 && player.y + player.height < enemy.y + enemy.height / 2) {
+            if (isStomp(player, enemy)) {
               if (enemy.isShell) {
                 // Kick the shell
                 enemy.shellVelocity = player.x < enemy.x ? 10 : -10;
@@ -802,7 +802,7 @@ export default function Game() {
             }
           } else {
             // Pebblit - normal stomp
-            if (player.velocityY > 0 && player.y + player.height < enemy.y + enemy.height / 2) {
+            if (isStomp(player, enemy)) {
               enemy.alive = false;
               player.velocityY = JUMP_FORCE / 2;
               setScore(s => s + 200);
@@ -999,19 +999,7 @@ export default function Game() {
         } else if (selectedItem.type === 'coin') {
             world.coins.push({ x: gridX + 16, y: gridY + 16, collected: false });
         } else if (selectedItem.type === 'enemy') {
-            if (selectedItem.subType === 'warden') {
-                 world.enemies.push({
-                    x: gridX, y: gridY - 32, width: 64, height: 64,
-                    velocityX: 0, alive: true, type: 'warden',
-                    hp: 5, maxHp: 5, fireTimer: 0, jumpTimer: 0, facingLeft: true
-                });
-            } else {
-                world.enemies.push({
-                    x: gridX, y: gridY, width: 32, height: 32,
-                    velocityX: -2, alive: true, type: selectedItem.subType,
-                    ...(selectedItem.subType === 'signalSnare' ? { baseY: gridY, width: 48, height: 64, velocityX: 0 } : {})
-                });
-            }
+            world.enemies.push(createEditorCreature(selectedItem.subType, gridX, gridY));
         } else if (selectedItem.type === 'powerup') {
             const insideEnergyBlock = world.platforms.some(platform =>
                 platform.type === 'question' &&
