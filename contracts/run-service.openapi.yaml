@@ -1,0 +1,283 @@
+openapi: 3.0.3
+info:
+  title: Nova's Orbit Jump Run Service
+  version: 0.1.0
+  description: >-
+    Draft contract for a game-owned, serverless run service. This service is
+    the only component allowed to submit Nova scores to the online leaderboard.
+    Weekly ranking uses the current ISO calendar week in UTC. Historical guest
+    row visibility in the existing leaderboard is a separate launch blocker.
+    No endpoint in this contract is deployed yet.
+servers:
+  - url: https://{host}/v1
+    variables:
+      host:
+        default: run-api.example.invalid
+paths:
+  /runs:
+    post:
+      operationId: startRun
+      summary: Start a ranked campaign attempt
+      description: >-
+        The server issues a single-use run ID and secret, pins the map, rules,
+        and scoring versions, and records its own start time. A valid signed
+        Hearso launch ticket may identify an account; absent that, a guest
+        profile is required. The caller cannot choose account status or boards.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartRunRequest'
+      responses:
+        '201':
+          description: Run created. The token must be kept in memory, never in a URL.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum: [no-store]
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartRunResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '429':
+          $ref: '#/components/responses/Problem'
+  /runs/{runId}/finish:
+    post:
+      operationId: finishRun
+      summary: Submit a completed campaign for verification
+      description: >-
+        The server validates the bounded transcript, pinned versions, elapsed
+        time, and single-use run state, then replays all steps. A matching
+        retry returns the same run result; a different payload for a finished
+        run is a conflict. A browser-supplied score is diagnostic and never
+        forwarded to the leaderboard. Only a verified win is eligible.
+      parameters:
+        - $ref: '#/components/parameters/RunId'
+      security:
+        - RunToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinishRunRequest'
+      responses:
+        '202':
+          description: The verified result is queued for a durable leaderboard write.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+        '429':
+          $ref: '#/components/responses/Problem'
+  /runs/{runId}:
+    get:
+      operationId: getRunResult
+      summary: Read verification and leaderboard-write state
+      description: >-
+        Polling never creates a leaderboard write. A public rank appears only
+        after the write succeeds. Results are scoped to the bearer run token.
+      parameters:
+        - $ref: '#/components/parameters/RunId'
+      security:
+        - RunToken: []
+      responses:
+        '200':
+          description: Current run state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunResult'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '429':
+          $ref: '#/components/responses/Problem'
+components:
+  securitySchemes:
+    RunToken:
+      type: http
+      scheme: bearer
+      description: Opaque, short-lived, per-run secret issued by startRun.
+  parameters:
+    RunId:
+      name: runId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    Problem:
+      description: RFC 9457 problem detail; no raw transcript or identity data.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    StartRunRequest:
+      type: object
+      additionalProperties: false
+      oneOf:
+        - required: [launchTicket]
+        - required: [guestProfile]
+      properties:
+        launchTicket:
+          type: string
+          description: Signed, one-time Hearso identity handoff; issuer contract pending.
+        guestProfile:
+          $ref: '#/components/schemas/GuestProfile'
+      description: Exactly one of launchTicket or guestProfile is required.
+    GuestProfile:
+      type: object
+      additionalProperties: false
+      required: [displayName, country]
+      properties:
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 32
+        country:
+          type: string
+          pattern: '^[A-Z]{2}$'
+          description: ISO 3166-1 alpha-2; unassigned codes are rejected.
+    Versions:
+      type: object
+      additionalProperties: false
+      required: [levelSetVersion, rulesVersion, scoringVersion]
+      properties:
+        levelSetVersion:
+          type: string
+          pattern: '^sha256:[0-9a-f]{64}$'
+        rulesVersion:
+          type: integer
+          minimum: 1
+        scoringVersion:
+          type: integer
+          minimum: 1
+    StartRunResponse:
+      type: object
+      additionalProperties: false
+      required: [runId, runToken, expiresAt, versions]
+      properties:
+        runId:
+          type: string
+          format: uuid
+        runToken:
+          type: string
+          minLength: 32
+        expiresAt:
+          type: string
+          format: date-time
+        versions:
+          $ref: '#/components/schemas/Versions'
+    FinishRunRequest:
+      type: object
+      additionalProperties: false
+      required: [transcript]
+      properties:
+        transcript:
+          $ref: '#/components/schemas/Transcript'
+        claimedScore:
+          type: integer
+          minimum: 0
+          description: Optional local display value; the server computes the authoritative score.
+    Transcript:
+      type: object
+      additionalProperties: false
+      required: [version, mode, levelSetVersion, rulesVersion, scoringVersion, steps, segments, truncated, endedAs]
+      properties:
+        version:
+          type: integer
+          enum: [3]
+        mode:
+          type: string
+          enum: [campaign]
+        levelSetVersion:
+          type: string
+          pattern: '^sha256:[0-9a-f]{64}$'
+        rulesVersion:
+          type: integer
+          minimum: 1
+        scoringVersion:
+          type: integer
+          minimum: 1
+        steps:
+          type: integer
+          minimum: 1
+          maximum: 108000
+        segments:
+          type: array
+          minItems: 1
+          maxItems: 20000
+          items:
+            type: array
+            minItems: 2
+            maxItems: 2
+            items:
+              type: integer
+              minimum: 0
+        truncated:
+          type: boolean
+          enum: [false]
+        endedAs:
+          type: string
+          enum: [win]
+    RunResult:
+      type: object
+      additionalProperties: false
+      required: [runId, status]
+      properties:
+        runId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [active, verifying, rejected, pending_write, ranked]
+        score:
+          type: integer
+          minimum: 0
+          description: Present after verification succeeds.
+        rejectionCode:
+          type: string
+          description: Stable code shown only for rejected runs.
+        ranks:
+          type: array
+          description: Present only after successful leaderboard writes; guests never receive alltime.
+          items:
+            type: object
+            additionalProperties: false
+            required: [board, rank]
+            properties:
+              board:
+                type: string
+                enum: [weekly, alltime]
+              rank:
+                type: integer
+                minimum: 1
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
