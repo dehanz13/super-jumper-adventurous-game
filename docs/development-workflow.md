@@ -11,9 +11,10 @@ Create each independent parent branch from the current `develop` branch. A depen
 3. `feature/original-art`: replace characters, enemies, names, scenes, audio cues, and all other recognizable borrowed presentation; review every level and screen.
 4. `feature/level-foundation`: start each new run at Level 1, separate level maps from the game loop, and prepare the current Level 2 and 3 maps for later design work. Levels 4–10 are future scope.
 5. `feature/audio-foundation`: cover gameplay actions with sound effects, keep three distinct looping tracks, and make music and effects replaceable.
-6. `feature/solo-leaderboard`: define scoring after the product decision, add validated run submission and the separate solo board, with weekly guest ranks and weekly/all-time account ranks. Changes to the leaderboard service belong in its own repository and pull requests.
-7. `feature/hearso-library`: add the game to Hearso's library and connect account sign-in. Changes to Hearso Web belong in its own repository and pull requests.
-8. `feature/deployment`: publish the standalone static game with S3 and CloudFront after the earlier branches are accepted.
+6. `feature/contact-calibration`: align damage and stomp contact with visible characters and give editor creatures their intended dimensions.
+7. `feature/solo-leaderboard`: define scoring after the product decision, add validated run submission and the separate solo board, with weekly guest ranks and weekly/all-time account ranks. Changes to the leaderboard service belong in its own repository and pull requests.
+8. `feature/hearso-library`: add the game to Hearso's library and connect account sign-in. Changes to Hearso Web belong in its own repository and pull requests.
+9. `feature/deployment`: publish the standalone static game with S3 and CloudFront after the earlier branches are accepted.
 
 ## Quality gate
 

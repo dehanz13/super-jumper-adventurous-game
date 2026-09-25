@@ -392,7 +392,7 @@ describe('game entry and first frame', () => {
   it('uses star protection to defeat an enemy on contact', () => {
     const canvas = openEditor();
     paint(canvas, 'Spectrum Shield', 96, 320);
-    paint(canvas, 'Pebblit', 128, 300);
+    paint(canvas, 'Pebblit', 128, 320);
     fireEvent.click(screen.getByRole('button', { name: /test/i }));
 
     stepFrames(2);
