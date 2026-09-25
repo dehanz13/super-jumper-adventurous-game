@@ -13,7 +13,7 @@ export function playerSpriteBounds(player) {
   };
 }
 
-const GROUND_ENEMIES = new Set(['goomba', 'koopa', 'spiny']);
+const GROUND_ENEMIES = new Set(['pebblit', 'rollpod', 'prismite']);
 
 export function alignGroundEnemy(enemy, platforms) {
   if (!GROUND_ENEMIES.has(enemy.type)) return enemy;
@@ -33,11 +33,4 @@ export function alignGroundEnemy(enemy, platforms) {
     x: Math.max(support.x, Math.min(enemy.x, support.x + support.width - enemy.width)),
     y: support.y - enemy.height,
   };
-}
-
-export function enemySpriteYOffset(enemy) {
-  if (enemy.type === 'goomba') return enemy.height - 30;
-  if (enemy.type === 'koopa') return enemy.height - (enemy.isShell ? 36 : 43);
-  if (enemy.type === 'spiny') return enemy.height - 36;
-  return 0;
 }

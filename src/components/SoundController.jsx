@@ -56,8 +56,8 @@ class SoundController {
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = 'square';
-    osc.frequency.setValueAtTime(987, t); // B5
-    osc.frequency.setValueAtTime(1318, t + 0.08); // E6
+    osc.frequency.setValueAtTime(1174.66, t); // D6
+    osc.frequency.setValueAtTime(1396.91, t + 0.08); // F6
     gain.gain.setValueAtTime(0.2, t);
     gain.gain.setValueAtTime(0.2, t + 0.3);
     gain.gain.linearRampToValueAtTime(0, t + 0.4);
@@ -181,12 +181,12 @@ class SoundController {
     const gain = this.ctx.createGain();
     osc.type = 'square';
 
-    // G4, C5, E5, G5, C6, E6
-    const notes = [392, 523, 659, 784, 1046, 1318];
+    // A rising whole-tone phrase for reaching a course beacon.
+    const notes = [293.66, 329.63, 369.99, 415.3, 466.16, 523.25];
     notes.forEach((freq, i) => {
         osc.frequency.setValueAtTime(freq, t + i * 0.1);
     });
-    osc.frequency.setValueAtTime(1318, t + 0.6);
+    osc.frequency.setValueAtTime(523.25, t + 0.6);
 
     gain.gain.setValueAtTime(0.3, t);
     gain.gain.setValueAtTime(0.3, t + 2);
@@ -215,27 +215,30 @@ class SoundController {
     this.isPlaying = true;
 
     // Note frequencies
-    const C4 = 261.63, D4 = 293.66, E4 = 329.63, F4 = 349.23, G4 = 392.00, A4 = 440.00;
-    const C3 = 130.81, G3 = 196.00, A3 = 220.00;
+    const D3 = 146.83, F3 = 174.61, A3 = 220.00;
+    const D4 = 293.66, F4 = 349.23, G4 = 392.00, A4 = 440.00;
+    const C5 = 523.25, D5 = 587.33, F5 = 698.46;
 
-    if (levelType === 2) { // Underground
-        this.tempo = 100;
+    if (levelType === 2) { // Caverns
+        this.tempo = 112;
         this.song = [
-            {f: C3, d: 0.2}, {f: C3, d: 0.2}, {f: A3, d: 0.2}, {f: A3, d: 0.2},
-            {f: A3, d: 0.2}, {f: G3, d: 0.2}, {f: null, d: 0.2}
+            {f: D3, d: 0.3}, {f: null, d: 0.1}, {f: F3, d: 0.15},
+            {f: A3, d: 0.3}, {f: F3, d: 0.15}, {f: D3, d: 0.4},
+            {f: null, d: 0.2}
         ];
-    } else if (levelType === 3) { // Sky
-        this.tempo = 140;
+    } else if (levelType === 3) { // High canopies
+        this.tempo = 132;
         this.song = [
-            {f: G4, d: 0.2}, {f: E4, d: 0.2}, {f: C4, d: 0.2}, {f: null, d: 0.1},
-            {f: A4, d: 0.2}, {f: F4, d: 0.2}, {f: D4, d: 0.2}, {f: null, d: 0.1}
+            {f: F5, d: 0.25}, {f: D5, d: 0.15}, {f: A4, d: 0.35},
+            {f: null, d: 0.1}, {f: C5, d: 0.2}, {f: G4, d: 0.25},
+            {f: D5, d: 0.4}, {f: null, d: 0.2}
         ];
-    } else { // Meadows (Default)
-        this.tempo = 180;
+    } else { // Meadow route
+        this.tempo = 156;
         this.song = [
-            {f: E4, d: 0.15}, {f: E4, d: 0.3}, {f: E4, d: 0.3},
-            {f: C4, d: 0.15}, {f: E4, d: 0.3}, {f: G4, d: 0.6},
-            {f: G3, d: 0.6}
+            {f: D4, d: 0.25}, {f: F4, d: 0.15}, {f: A4, d: 0.35},
+            {f: null, d: 0.1}, {f: G4, d: 0.2}, {f: F4, d: 0.2},
+            {f: C5, d: 0.3}, {f: A4, d: 0.4}, {f: null, d: 0.15}
         ];
     }
 

@@ -6,7 +6,7 @@ test('a player can start, pause, and resume a world', async ({ page }) => {
   await page.getByRole('button', { name: '1-1' }).click();
 
   await expect(page.locator('canvas')).toBeVisible();
-  await expect(page.getByText('WORLD')).toBeVisible();
+  await expect(page.getByText('SECTOR')).toBeVisible();
   await page.getByRole('button', { name: 'Pause game' }).click();
   await expect(page.getByText('PAUSED')).toBeVisible();
   await page.getByRole('button', { name: /continue/i }).click();
@@ -19,8 +19,8 @@ test('the player sprite reaches the ground line', async ({ page, isMobile }) => 
   await page.getByRole('button', { name: '1-1' }).click();
 
   await expect.poll(async () => page.locator('canvas').evaluate(canvas => {
-    return Array.from(canvas.getContext('2d').getImageData(110, 499, 1, 1).data).slice(0, 3);
-  }), { timeout: 5_000 }).toEqual([107, 62, 8]);
+    return Array.from(canvas.getContext('2d').getImageData(114, 499, 1, 1).data).slice(0, 3);
+  }), { timeout: 5_000 }).toEqual([46, 64, 90]);
   await page.locator('canvas').screenshot({
     path: `test-results/grounding-${isMobile ? 'mobile' : 'desktop'}.png`,
   });
@@ -51,7 +51,7 @@ test('dragging across the direction pad reverses movement', async ({ page, isMob
     const positions = [];
     for (let x = 0; x < 350; x++) {
       const offset = x * 4;
-      if (pixels[offset] === 107 && pixels[offset + 1] === 62 && pixels[offset + 2] === 8) positions.push(x);
+      if (pixels[offset] === 46 && pixels[offset + 1] === 64 && pixels[offset + 2] === 90) positions.push(x);
     }
     return positions.length ? (positions[0] + positions[positions.length - 1]) / 2 : null;
   });

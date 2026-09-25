@@ -75,8 +75,19 @@ describe('game entry and first frame', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it('opens sector selection when the intro finishes', () => {
+    vi.useFakeTimers();
+    render(<Game />);
+
+    act(() => vi.advanceTimersByTime(4500));
+
+    expect(screen.getByText('SELECT SECTOR')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '1-1' })).toBeInTheDocument();
   });
 
   it('opens a selected world and accepts keyboard movement', () => {
@@ -84,7 +95,7 @@ describe('game entry and first frame', () => {
     fireEvent.click(screen.getByText(/skip/i));
     fireEvent.click(screen.getByRole('button', { name: '1-1' }));
 
-    expect(screen.getByText('WORLD')).toBeInTheDocument();
+    expect(screen.getByText('SECTOR')).toBeInTheDocument();
     fireEvent.keyDown(window, { code: 'ArrowRight' });
     stepFrames(1);
     fireEvent.keyUp(window, { code: 'ArrowRight' });
@@ -124,7 +135,7 @@ describe('game entry and first frame', () => {
     fireEvent.click(screen.getByRole('button', { name: /level creator/i }));
     const canvas = container.querySelector('canvas');
 
-    for (const [index, item] of ['Ground', 'Brick', '?', 'Coin', 'Goomba', 'Koopa', 'Plant', 'Spiny', 'Lakitu', 'Bowser', 'Mushroom', 'Fire Flower', 'Star', 'Flag'].entries()) {
+    for (const [index, item] of ['Terrain', 'Alloy Block', '?', 'Star Shard', 'Pebblit', 'Rollpod', 'Signal Snare', 'Prismite', 'Hovermite', 'Warden', 'Power Cell', 'Plasma Core', 'Spectrum Shield', 'Beacon'].entries()) {
       fireEvent.click(screen.getByText(item));
       fireEvent.mouseDown(canvas, { clientX: 64 + index * 48, clientY: 320 });
     }
@@ -159,7 +170,7 @@ describe('game entry and first frame', () => {
     expect(screen.getByText('PAUSED')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /continue/i }));
     fireEvent.click(screen.getByRole('button', { name: 'Restart game' }));
-    expect(screen.getByText('WORLD')).toBeInTheDocument();
+    expect(screen.getByText('SECTOR')).toBeInTheDocument();
   });
 
   it('finishes a custom course and continues to the next world', () => {
@@ -170,13 +181,13 @@ describe('game entry and first frame', () => {
     const { container } = render(<Game />);
     fireEvent.click(screen.getByText(/skip/i));
     fireEvent.click(screen.getByRole('button', { name: /level creator/i }));
-    fireEvent.click(screen.getByText('Flag'));
+    fireEvent.click(screen.getByText('Beacon'));
     fireEvent.mouseDown(container.querySelector('canvas'), { clientX: 96, clientY: 320 });
     fireEvent.click(screen.getByRole('button', { name: /test/i }));
 
     stepFrames(1);
     expect(screen.getByText('COURSE CLEAR!')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /next world/i }));
+    fireEvent.click(screen.getByRole('button', { name: /next sector/i }));
     expect(screen.getByText('2-1')).toBeInTheDocument();
   });
 
@@ -206,13 +217,14 @@ describe('game entry and first frame', () => {
     const { container } = render(<Game />);
     fireEvent.click(screen.getByText(/skip/i));
     fireEvent.click(screen.getByRole('button', { name: /level creator/i }));
-    fireEvent.click(screen.getByText('Goomba'));
+    fireEvent.click(screen.getByText('Pebblit'));
     fireEvent.mouseDown(container.querySelector('canvas'), { clientX: 128, clientY: 448 });
     fireEvent.click(screen.getByRole('button', { name: /test/i }));
 
     for (let i = 0; i < 50; i++) stepFrames(1);
-    const score = screen.getByText('MARIO').parentElement.textContent;
-    expect(score).toBe('MARIO000200');
+    const score = screen.getByText('NOVA').parentElement.textContent;
+    expect(score).toBe('NOVA000200');
+    expect(screen.getByText('SHARDS').parentElement.textContent).toBe('SHARDS✦×00');
   });
 
   it('releases a power-up by hitting a question block', () => {
@@ -226,7 +238,7 @@ describe('game entry and first frame', () => {
     const canvas = container.querySelector('canvas');
     fireEvent.click(screen.getByText('?'));
     fireEvent.mouseDown(canvas, { clientX: 96, clientY: 352 });
-    fireEvent.click(screen.getByText('Mushroom'));
+    fireEvent.click(screen.getByText('Power Cell'));
     fireEvent.mouseDown(canvas, { clientX: 96, clientY: 320 });
     fireEvent.click(screen.getByRole('button', { name: /test/i }));
 
@@ -252,7 +264,7 @@ describe('game entry and first frame', () => {
     const { container } = render(<Game />);
     fireEvent.click(screen.getByText(/skip/i));
     fireEvent.click(screen.getByRole('button', { name: /level creator/i }));
-    fireEvent.click(screen.getByText('Bowser'));
+    fireEvent.click(screen.getByText('Warden'));
     fireEvent.mouseDown(container.querySelector('canvas'), { clientX: 512, clientY: 448 });
     fireEvent.click(screen.getByRole('button', { name: /test/i }));
 
@@ -260,7 +272,7 @@ describe('game entry and first frame', () => {
     expect(soundController.playFireball).toHaveBeenCalled();
   });
 
-  it('spawns a spiny from a nearby cloud enemy', () => {
+  it('spawns a crystal creature from a nearby hovering enemy', () => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getBoundingClientRect').mockReturnValue({
       left: 0, top: 0, width: 800, height: 600,
     });
@@ -268,35 +280,35 @@ describe('game entry and first frame', () => {
     const { container } = render(<Game />);
     fireEvent.click(screen.getByText(/skip/i));
     fireEvent.click(screen.getByRole('button', { name: /level creator/i }));
-    fireEvent.click(screen.getByText('Lakitu'));
+    fireEvent.click(screen.getByText('Hovermite'));
     fireEvent.mouseDown(container.querySelector('canvas'), { clientX: 160, clientY: 80 });
     fireEvent.click(screen.getByRole('button', { name: /test/i }));
 
     for (let i = 0; i < 190; i++) stepFrames(1);
-    expect(fillStyles).toContain('#A01010');
+    expect(fillStyles).toContain('#F38173');
   });
 
   it.each([
-    ['Koopa', 'score'],
-    ['Spiny', 'damage'],
-    ['Plant', 'damage'],
-    ['Bowser', 'damage'],
+    ['Rollpod', 'score'],
+    ['Prismite', 'damage'],
+    ['Signal Snare', 'damage'],
+    ['Warden', 'damage'],
   ])('resolves an encounter with %s', (enemy, outcome) => {
     const canvas = openEditor();
     paint(canvas, enemy, 128, 448);
     fireEvent.click(screen.getByRole('button', { name: /test/i }));
 
     for (let i = 0; i < 55; i++) stepFrames(1);
-    const score = screen.getByText('MARIO').parentElement.textContent;
+    const score = screen.getByText('NOVA').parentElement.textContent;
     const lives = screen.getByText('LIVES').parentElement.textContent;
-    if (outcome === 'score') expect(score).not.toBe('MARIO000000');
+    if (outcome === 'score') expect(score).not.toBe('NOVA000000');
     else expect(lives).not.toBe('LIVES×3');
   });
 
   it('collects an editor power-up and fires at an enemy', () => {
     const canvas = openEditor();
-    paint(canvas, 'Fire Flower', 96, 320);
-    paint(canvas, 'Goomba', 192, 320);
+    paint(canvas, 'Plasma Core', 96, 320);
+    paint(canvas, 'Pebblit', 192, 320);
     fireEvent.click(screen.getByRole('button', { name: /test/i }));
 
     stepFrames(1);
@@ -307,9 +319,40 @@ describe('game entry and first frame', () => {
 
     expect(soundController.playFireball).toHaveBeenCalled();
     expect(screen.getByText('001200')).toBeInTheDocument();
+    expect(soundController.playStomp).not.toHaveBeenCalled();
   });
 
-  it.each(['Mushroom', 'Star'])('collects a placed %s', (item) => {
+  it('retracts a rollpod when a plasma shot hits it', () => {
+    const canvas = openEditor();
+    paint(canvas, 'Plasma Core', 96, 320);
+    paint(canvas, 'Rollpod', 192, 320);
+    fireEvent.click(screen.getByRole('button', { name: /test/i }));
+
+    stepFrames(1);
+    fireEvent.keyDown(window, { code: 'KeyX' });
+    stepFrames(12);
+    fireEvent.keyUp(window, { code: 'KeyX' });
+
+    expect(soundController.playFireball).toHaveBeenCalled();
+    expect(screen.getByText('001200')).toBeInTheDocument();
+    expect(soundController.playStomp).not.toHaveBeenCalled();
+  });
+
+  it('registers a plasma shot against the course warden', () => {
+    const canvas = openEditor();
+    paint(canvas, 'Plasma Core', 96, 320);
+    paint(canvas, 'Warden', 224, 320);
+    fireEvent.click(screen.getByRole('button', { name: /test/i }));
+
+    stepFrames(1);
+    fireEvent.keyDown(window, { code: 'KeyX' });
+    stepFrames(20);
+    fireEvent.keyUp(window, { code: 'KeyX' });
+
+    expect(soundController.playKick).toHaveBeenCalled();
+  });
+
+  it.each(['Power Cell', 'Spectrum Shield'])('collects a placed %s', (item) => {
     const canvas = openEditor();
     paint(canvas, item, 96, 320);
     fireEvent.click(screen.getByRole('button', { name: /test/i }));
@@ -337,17 +380,45 @@ describe('game entry and first frame', () => {
 
     expect(screen.getByText('000200')).toBeInTheDocument();
     expect(soundController.playCoin).toHaveBeenCalled();
+
+    stepFrames(35);
+    fireEvent.keyDown(window, { code: 'Space' });
+    stepFrames(30);
+    fireEvent.keyUp(window, { code: 'Space' });
+    expect(soundController.playBump).toHaveBeenCalled();
   });
 
   it('uses star protection to defeat an enemy on contact', () => {
     const canvas = openEditor();
-    paint(canvas, 'Star', 96, 320);
-    paint(canvas, 'Goomba', 128, 300);
+    paint(canvas, 'Spectrum Shield', 96, 320);
+    paint(canvas, 'Pebblit', 128, 300);
     fireEvent.click(screen.getByRole('button', { name: /test/i }));
 
     stepFrames(2);
     expect(screen.getByText('001200')).toBeInTheDocument();
     expect(soundController.playKick).toHaveBeenCalled();
+  });
+
+  it('lets the spectrum shield withstand a course warden encounter', () => {
+    const canvas = openEditor();
+    paint(canvas, 'Spectrum Shield', 96, 320);
+    paint(canvas, 'Warden', 128, 320);
+    fireEvent.click(screen.getByRole('button', { name: /test/i }));
+
+    stepFrames(2);
+    expect(screen.getByText('LIVES').parentElement.textContent).toBe('LIVES×3');
+    expect(soundController.playPowerUp).toHaveBeenCalled();
+  });
+
+  it('consumes a power cell instead of a life when hit by a prismite', () => {
+    const canvas = openEditor();
+    paint(canvas, 'Power Cell', 96, 320);
+    paint(canvas, 'Prismite', 128, 320);
+    fireEvent.click(screen.getByRole('button', { name: /test/i }));
+
+    stepFrames(2);
+    expect(screen.getByText('LIVES').parentElement.textContent).toBe('LIVES×3');
+    expect(soundController.playPowerUp).toHaveBeenCalled();
   });
 
   it('accepts touch movement and jump controls', () => {
@@ -370,11 +441,12 @@ describe('game entry and first frame', () => {
 
   it('collects a coin placed in the player path', () => {
     const canvas = openEditor();
-    paint(canvas, 'Coin', 96, 384);
+    paint(canvas, 'Star Shard', 96, 384);
     fireEvent.click(screen.getByRole('button', { name: /test/i }));
 
     for (let i = 0; i < 20; i++) stepFrames(1);
     expect(screen.getByText('000100')).toBeInTheDocument();
+    expect(screen.getByText('SHARDS').parentElement.textContent).toBe('SHARDS✦×01');
     expect(soundController.playCoin).toHaveBeenCalled();
   });
 

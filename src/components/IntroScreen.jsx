@@ -1,83 +1,75 @@
+import { useRef } from 'react';
+import { gsap, useGSAP } from '@/lib/animation';
+
 export default function IntroScreen({ introPhase, onSkip }) {
+  const rootRef = useRef(null);
+
+  useGSAP(() => {
+    if (introPhase !== 3 || window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) return;
+    gsap.timeline({ defaults: { ease: 'power2.out' } })
+      .fromTo('.intro-logo', { autoAlpha: 0, scale: 0.4, y: 24 }, { autoAlpha: 1, scale: 1, y: 0, duration: 0.8, ease: 'back.out(1.5)' })
+      .fromTo('.intro-planet', { rotation: -12 }, { rotation: 8, duration: 1.2, ease: 'sine.inOut' }, 0);
+  }, { scope: rootRef, dependencies: [introPhase], revertOnUpdate: true });
+
   return (
     <div
+      ref={rootRef}
       className="absolute inset-0 bg-black flex items-center justify-center cursor-pointer overflow-hidden"
       onClick={(e) => { e.preventDefault(); onSkip(); }}
     >
-      {/* Animated Background */}
-      <div className="absolute inset-0" style={{ background: introPhase >= 1 ? '#5C94FC' : '#000', transition: 'background 1s ease-out' }}>
+      {/* Animated starfield and distant planet */}
+      <div className="absolute inset-0" style={{ background: introPhase >= 1 ? '#15274D' : '#000', transition: 'background 1s ease-out' }}>
         {introPhase >= 1 && (
           <>
-            <div className="absolute animate-scroll-slow" style={{ top: '15%' }}>
-              {[0, 200, 450, 700, 950, 1200].map((x, i) => (
-                <div key={i} className="absolute bg-white rounded-full" style={{ left: x, width: 80, height: 40, boxShadow: '30px -10px 0 white, 60px 0 0 white' }} />
+            <div className="absolute inset-0 animate-scroll-slow">
+              {Array.from({ length: 25 }, (_, i) => (
+                <div key={i} className="absolute bg-[#E7FAFF]" style={{ left: `${(i * 37) % 100}%`, top: `${(i * 29) % 70}%`, width: i % 4 === 0 ? 3 : 2, height: i % 4 === 0 ? 3 : 2 }} />
               ))}
             </div>
-            <div className="absolute bottom-24 w-full">
-              <svg viewBox="0 0 800 100" className="w-full animate-scroll-medium">
-                <ellipse cx="100" cy="100" rx="120" ry="80" fill="#00A800"/>
-                <ellipse cx="350" cy="100" rx="80" ry="60" fill="#00A800"/>
-                <ellipse cx="550" cy="100" rx="100" ry="70" fill="#00A800"/>
-                <ellipse cx="750" cy="100" rx="90" ry="65" fill="#00A800"/>
-              </svg>
-            </div>
-            <div className="absolute bottom-0 w-full h-24 bg-[#C84C0C]">
-              <div className="w-full h-4 bg-[#00A800]" />
+            <div className="intro-planet absolute top-[18%] right-[12%] w-24 h-24 sm:w-40 sm:h-40 rounded-full bg-[#7788AC] border-8 border-[#28D9CF]/70" />
+            <div className="absolute bottom-0 w-full h-24 bg-[#6756B8]">
+              <div className="w-full h-4 bg-[#28D9CF]" />
             </div>
           </>
         )}
       </div>
 
-      {/* Mario Running */}
+      {/* Nova crosses the opening scene in an explorer suit. */}
       {introPhase >= 1 && (
         <div className="absolute bottom-24 z-10" style={{ left: introPhase >= 2 ? '35%' : '-15%', transition: 'left 2s ease-out' }}>
           <div className="animate-bounce-run">
-            <svg width="80" height="96" viewBox="0 0 16 20" style={{ imageRendering: 'pixelated' }}>
-              <rect x="5" y="0" width="6" height="1" fill="#E52521"/>
-              <rect x="3" y="1" width="10" height="1" fill="#E52521"/>
-              <rect x="3" y="2" width="10" height="1" fill="#E52521"/>
-              <rect x="3" y="3" width="3" height="1" fill="#6B3E08"/>
-              <rect x="6" y="3" width="3" height="1" fill="#FFA54F"/>
-              <rect x="9" y="3" width="1" height="1" fill="#6B3E08"/>
-              <rect x="10" y="3" width="1" height="1" fill="#FFA54F"/>
-              <rect x="2" y="4" width="1" height="1" fill="#6B3E08"/>
-              <rect x="3" y="4" width="1" height="1" fill="#FFA54F"/>
-              <rect x="4" y="4" width="1" height="1" fill="#6B3E08"/>
-              <rect x="5" y="4" width="4" height="1" fill="#FFA54F"/>
-              <rect x="9" y="4" width="1" height="1" fill="#6B3E08"/>
-              <rect x="10" y="4" width="2" height="1" fill="#FFA54F"/>
-              <rect x="4" y="5" width="6" height="1" fill="#FFA54F"/>
-              <rect x="3" y="6" width="3" height="1" fill="#E52521"/>
-              <rect x="6" y="6" width="3" height="1" fill="#0033CC"/>
-              <rect x="9" y="6" width="3" height="1" fill="#E52521"/>
-              <rect x="2" y="7" width="4" height="1" fill="#E52521"/>
-              <rect x="6" y="7" width="4" height="1" fill="#0033CC"/>
-              <rect x="10" y="7" width="3" height="1" fill="#E52521"/>
-              <rect x="3" y="8" width="4" height="1" fill="#0033CC"/>
-              <rect x="8" y="8" width="4" height="1" fill="#0033CC"/>
-              <rect x="2" y="9" width="4" height="1" fill="#6B3E08"/>
-              <rect x="9" y="9" width="4" height="1" fill="#6B3E08"/>
+            <svg width="72" height="88" viewBox="0 0 13 13" aria-hidden="true" style={{ imageRendering: 'pixelated' }}>
+              <rect x="6" y="0" width="1" height="2" fill="#F4DB70" />
+              <rect x="3" y="2" width="7" height="5" fill="#17243F" />
+              <rect x="4" y="3" width="5" height="3" fill="#E7FAFF" />
+              <rect x="4" y="4" width="5" height="1" fill="#28D9CF" />
+              <rect x="3" y="7" width="7" height="4" fill="#6756B8" />
+              <rect x="6" y="8" width="2" height="2" fill="#28D9CF" />
+              <rect x="1" y="8" width="2" height="3" fill="#17243F" />
+              <rect x="10" y="8" width="2" height="3" fill="#17243F" />
+              <rect x="3" y="11" width="3" height="2" fill="#2E405A" />
+              <rect x="7" y="11" width="3" height="2" fill="#2E405A" />
             </svg>
           </div>
         </div>
       )}
 
-      {/* Coins flying */}
+      {/* Star shards flying */}
       {introPhase >= 2 && (
         <>
           {[1,2,3,4,5].map(i => (
             <div key={i} className="absolute animate-coin-fly" style={{ left: `${20 + i * 12}%`, top: '30%', animationDelay: `${i * 0.15}s` }}>
-              <div className="w-6 h-8 bg-[#F8D830] rounded-full border-2 border-[#C87820] animate-spin-coin" />
+              <div className="w-6 h-8 bg-[#F4DB70] rotate-45 border-2 border-[#E7FAFF] animate-spin-coin" />
             </div>
           ))}
         </>
       )}
 
       {/* Logo */}
-      <div className="absolute z-20 flex flex-col items-center" style={{ opacity: introPhase >= 3 ? 1 : 0, transform: `scale(${introPhase >= 3 ? 1 : 0.3})`, transition: 'all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
-        <div className="text-6xl font-black mb-2 tracking-wider" style={{ color: '#F8D830', textShadow: '4px 4px 0 #E52521, 6px 6px 0 #000', fontFamily: 'system-ui' }}>SUPER</div>
-        <div className="text-8xl font-black tracking-wide" style={{ background: 'linear-gradient(180deg, #E52521 0%, #E52521 45%, #00A800 55%, #00A800 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', filter: 'drop-shadow(5px 5px 0 #000)', fontFamily: 'system-ui' }}>MARIO</div>
-        {introPhase >= 4 && <div className="text-white text-xl mt-4 animate-pulse" style={{ textShadow: '2px 2px 0 #000' }}>★ CLONE EDITION ★</div>}
+      <div className="intro-logo absolute z-20 flex flex-col items-center" style={{ opacity: introPhase >= 3 ? 1 : 0 }}>
+        <div className="text-4xl sm:text-6xl font-black mb-2 tracking-wider" style={{ color: '#F4DB70', textShadow: '4px 4px 0 #6756B8, 6px 6px 0 #000', fontFamily: 'system-ui' }}>NOVA'S</div>
+        <div className="text-5xl sm:text-8xl font-black tracking-wide text-center" style={{ background: 'linear-gradient(180deg, #28D9CF 0%, #28D9CF 45%, #8878D7 55%, #8878D7 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', filter: 'drop-shadow(5px 5px 0 #000)', fontFamily: 'system-ui' }}>ORBIT JUMP</div>
+        {introPhase >= 4 && <div className="text-white text-xl mt-4 animate-pulse" style={{ textShadow: '2px 2px 0 #000' }}>★ A COSMIC ADVENTURE ★</div>}
       </div>
 
       {introPhase === 3 && <div className="absolute inset-0 bg-white animate-flash pointer-events-none z-30" />}
@@ -90,7 +82,7 @@ export default function IntroScreen({ introPhase, onSkip }) {
         </div>
       )}
 
-      <div className="absolute bottom-4 text-white/50 text-xs z-40" style={{ fontFamily: 'monospace' }}>CLICK TO SKIP</div>
+      <div className="absolute bottom-4 text-white/70 text-xs z-40" style={{ fontFamily: 'monospace' }}>TAP OR CLICK TO SKIP</div>
 
       <style>{`
         @keyframes scroll-slow { 0% { transform: translateX(0); } 100% { transform: translateX(-400px); } }

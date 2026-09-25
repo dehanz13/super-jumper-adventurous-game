@@ -22,7 +22,7 @@ describe('game screens', () => {
     render(<GameOverScreen score={125} level={3} onRestart={onRestart} />);
 
     expect(screen.getByText('SCORE: 000125')).toBeInTheDocument();
-    expect(screen.getByText('WORLD 3-1')).toBeInTheDocument();
+    expect(screen.getByText('SECTOR 3-1')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /try again/i }));
     expect(onRestart).toHaveBeenCalledOnce();
   });
