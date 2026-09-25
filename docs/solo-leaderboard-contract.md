@@ -6,7 +6,7 @@ This document records the contract to implement before Nova's Orbit Jump publish
 
 The existing `online-leaderboard` OpenAPI contract accepts `POST /v1/scores` with a required `game-id` query parameter and a score body containing `playerId`, `displayName`, `country`, `score`, `achievedAt`, and `matchId`. A `boards` array can select `weekly` and/or `alltime`; if omitted, the service writes its default all-time, daily, and weekly boards. A new score replaces a player's row only when it is strictly higher. The service does not authenticate a player; its caller vouches for identity and score. Hearso's existing leaderboard client is therefore server-only.
 
-The service's current weekly period is an ISO week in UTC. Its weekly score rows are configured to expire about 400 days after the period ends, so a requirement to remove a guest's historical public rank after seven days is **not** satisfied by writing only to a weekly board. `X-Api-Key` is optional in the current OpenAPI expand phase; the exact deployed stage and credential enforcement need verification before launch.
+The founder selected the **current ISO calendar week in UTC** (Monday through Sunday) for weekly ranking. The service supports that board, but it also allows public queries for explicit past weekly periods and retains weekly rows for about 400 days. Therefore, if “only for one week” means past guest rows must become inaccessible, writing to the current weekly board alone is insufficient. That visibility rule needs a separate leaderboard-side cleanup or read-policy change before launch. `X-Api-Key` is optional in the current OpenAPI expand phase; the exact deployed stage and credential enforcement need verification before launch.
 
 These facts come from `online-leaderboard/contracts/openapi.yaml`, `docs/adr/0009-inverted-score-key-design.md`, `docs/adr/0014-snapshot-storage-and-retention.md`, and Hearso Web's `lib/leaderboard-client.ts`, inspected on 2026-09-25. They describe source contracts, not proof of a deployed endpoint.
 
@@ -25,7 +25,7 @@ Only a verified run that clears the full current campaign is rank eligible. Game
 
 ## Proposed run contract
 
-The static game calls a new game-owned serverless run service, never `POST /v1/scores` directly. These are proposed operations; they do not exist yet:
+The static game calls a new game-owned serverless run service, never `POST /v1/scores` directly. [The proposed OpenAPI contract](../contracts/run-service.openapi.yaml) describes the operations and payloads; they do not exist yet:
 
 1. **Start run:** the service creates a run ID, records server start time, map/rules/scoring versions, level sequence, and player class. It returns a short-lived run token and the versioned simulation inputs needed by the client. Hearso account status is checked through a trusted server path. A guest receives a server-issued pseudonymous ID.
 2. **Finish run:** the client sends the run ID and its bounded input transcript. The service rejects an expired or reused run and replays it against the pinned game version. It computes score from the same named events in `src/game/scoring.js`; a client-supplied total is diagnostic only. The service records the verified result once, then submits it with a stable `matchId` and `Idempotency-Key` to the leaderboard. Guest submissions select `boards: ["weekly"]`; account submissions select `boards: ["weekly", "alltime"]`.
@@ -36,16 +36,17 @@ The run service must choose `playerId`, display name, country, board eligibility
 ## Work needed before implementation can be trusted
 
 - Run the shared deterministic simulation in a trusted verifier and compare its outcome and score with the submitted claim. Browser play now uses the same fixed step, and a React gameplay test replays a completed campaign captured through the `onRunComplete` callback. A client-supplied transcript alone is insufficient for public ranking. Truncated transcripts must be excluded, with a clear player-facing state when submission is added.
+- `src/game/rankedRunVerifier.js` now provides a pure verification function for a future Lambda. It checks a server-owned active run, pinned versions, plausible elapsed time, and replayed win/score. It does not authenticate run tokens, persist a result, choose a player identity, or write to the leaderboard. The elapsed-time check blocks immediate precomputed submissions but cannot prove a human played the run.
 - Retain each released level-map content version, gameplay-rules version, and scoring policy in the verifier so a run started on one release can be checked after a new deployment. The browser now stamps these versions into its local transcript; the server must pin them at run start rather than trusting a client claim.
 - Define the guest identity and country collection flow for both standalone and embedded play. The leaderboard rejects unassigned country codes; a guessed default would create false profile data.
 - Define the secure Hearso-to-game identity handoff. An embedded frame must check message origin and must not receive leaderboard credentials or account secrets through a URL.
 - Enforce completed-campaign-only eligibility in the trusted finish service. Game Over and abandoned runs are excluded. Score rules must be identical on standalone and embedded play.
-- Confirm the meaning of “one week”: current ISO calendar week or a rolling seven days from each score. A rolling window or removal of historical guest ranks requires backend work beyond the current weekly board selector.
+- Resolve historical guest visibility. The chosen current ISO week uses the existing selector, but explicit past-week leaderboard reads remain possible while the service retains rows. Strict one-week public visibility requires a tested cleanup or read-policy change in the leaderboard service.
 - Check the deployed leaderboard stage supports `boards`, its credential state, and a dedicated game ID before any production write. Use only a scratch board for integration tests.
 
 ## Release sequence
 
-1. Freeze the run and scoring contract, including week semantics and finish eligibility.
+1. Freeze the run and scoring contract, including identity handoff, historical guest visibility, and finish eligibility. Weekly ranking uses the current ISO week in UTC.
 2. Exercise the shared simulation and replay across browser, test, and future verifier runtimes; keep custom editor maps out of ranked runs.
 3. Implement the game-owned serverless run service and durable retry path in a separate backend branch. Validate its contract and failure cases locally before any cloud deployment.
 4. Add the client adapter and visible pending/verified states; test standalone and Hearso embed journeys against the run service.
