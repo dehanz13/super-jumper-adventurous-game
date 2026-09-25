@@ -102,6 +102,16 @@ describe('game entry and first frame', () => {
     expect(frames.size).toBeGreaterThan(0);
   });
 
+  it('stops background music when the embedded game unmounts', () => {
+    const view = render(<Game />);
+    fireEvent.click(screen.getByText(/skip/i));
+    fireEvent.click(screen.getByRole('button', { name: /press start/i }));
+    expect(soundController.playBGM).toHaveBeenCalledWith(1);
+
+    view.unmount();
+    expect(soundController.stopBGM).toHaveBeenCalledTimes(1);
+  });
+
   it('switches the animation loop into editor drawing mode', () => {
     render(<Game />);
     fireEvent.click(screen.getByText(/skip/i));

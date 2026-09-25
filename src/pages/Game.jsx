@@ -841,9 +841,16 @@ export default function Game() {
       loseLife();
     }
 
-    // Camera follow
-    const targetOffset = player.x - 300;
-    world.offset = Math.max(0, Math.min(targetOffset, world.maxOffset || 2600));
+    // Follow the explorer within the portion of the canvas actually visible.
+    const drawnWidth = canvas.getBoundingClientRect().width || canvas.width;
+    const viewportWidth = canvas.parentElement?.clientWidth || drawnWidth;
+    const visibleWorldWidth = canvas.width * Math.min(1, viewportWidth / drawnWidth);
+    const lead = Math.min(300, visibleWorldWidth * 0.4);
+    const goalOffset = world.flag
+      ? world.flag.x + world.flag.width - visibleWorldWidth + 40
+      : 0;
+    const maxOffset = Math.max(world.maxOffset || 2600, goalOffset);
+    world.offset = Math.max(0, Math.min(player.x - lead, maxOffset));
     }
 
     // Draw everything
@@ -920,6 +927,8 @@ export default function Game() {
       }
     };
   }, [gameState, gameLoop]);
+
+  useEffect(() => () => soundController.stopBGM(), []);
 
   // Editor Mouse Handling
   const mouseRef = useRef(null);
@@ -1180,7 +1189,7 @@ export default function Game() {
             onMouseDown={handleCanvasClick}
             onMouseMove={handleMouseMove}
             onMouseLeave={() => mouseRef.current = null}
-            className={`bg-sky-300 block w-full h-auto ${gameState === 'editor' ? 'cursor-none' : ''}`}
+            className={`bg-sky-300 block w-[700px] max-w-none sm:w-full h-auto ${gameState === 'editor' ? 'cursor-none' : ''}`}
             style={{ imageRendering: 'pixelated' }}
           />
 
