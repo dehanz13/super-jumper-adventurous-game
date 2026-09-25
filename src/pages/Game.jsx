@@ -7,7 +7,7 @@ import IntroScreen from '@/components/IntroScreen';
 import { drawCreature, drawExplorer } from '@/game/characterArt';
 import { resolvePlasmaHit } from '@/game/combat';
 import { drawBeacon, drawPickup, drawSpaceBackdrop, drawStarShard, drawTerrain } from '@/game/worldArt';
-import { alignGroundEnemy, createEditorCreature, creatureHurtbox, isStomp, playerHurtbox } from '@/game/geometry';
+import { alignGroundEnemy, beaconFinishBounds, createEditorCreature, creatureHurtbox, isStomp, playerHurtbox } from '@/game/geometry';
 import { DIRECTION_KEYS, directionAtPoint } from '@/game/input';
 import { getLevelData, hasNextLevel } from '@/game/levels';
 import { takeFixedSteps } from '@/game/fixedStep';
@@ -823,7 +823,7 @@ export default function Game() {
     world.enemies = world.enemies.filter(e => e.y < 700 && e.alive);
 
     // Flag (win condition)
-    if (world.flag && checkCollision(player, world.flag)) {
+    if (world.flag && checkCollision(player, beaconFinishBounds(world.flag))) {
       runEndedRef.current = true;
       soundController.playStageClear();
       if (hasNextLevel(level)) {

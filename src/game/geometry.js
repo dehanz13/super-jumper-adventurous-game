@@ -53,6 +53,15 @@ export function isStomp(player, creature) {
     && player.y + player.height < body.y + body.height / 2;
 }
 
+export function beaconFinishBounds(beacon) {
+  return {
+    x: beacon.x - 12,
+    y: 0,
+    width: beacon.width + 24,
+    height: beacon.y + beacon.height,
+  };
+}
+
 const GROUND_ENEMIES = new Set(['pebblit', 'rollpod', 'prismite']);
 
 const CREATURE_DIMENSIONS = {

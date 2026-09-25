@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { alignGroundEnemy, createEditorCreature, creatureHurtbox, isStomp, playerHurtbox, playerSpriteBounds } from '../src/game/geometry';
+import { alignGroundEnemy, beaconFinishBounds, createEditorCreature, creatureHurtbox, isStomp, playerHurtbox, playerSpriteBounds } from '../src/game/geometry';
 
 describe('player sprite bounds', () => {
   it.each([
@@ -72,5 +72,10 @@ describe('visible contact geometry', () => {
     expect(createEditorCreature('warden', 128, 320))
       .toMatchObject({ x: 128, y: 288, width: 64, height: 64, hp: 5 });
     expect(() => createEditorCreature('unknown', 0, 0)).toThrow(RangeError);
+  });
+
+  it('covers the visible beacon beam from the top of the play area', () => {
+    expect(beaconFinishBounds({ x: 3200, y: 200, width: 20, height: 300 }))
+      .toEqual({ x: 3188, y: 0, width: 44, height: 500 });
   });
 });
