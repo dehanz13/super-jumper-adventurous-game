@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import Game from '../src/pages/Game';
+import { replayCampaign } from '../src/game/simulation';
 
 const { positions } = vi.hoisted(() => ({ positions: [] }));
 
@@ -19,7 +20,9 @@ describe('game simulation speed', () => {
     vi.unstubAllGlobals();
   });
 
-  function runForFrames(refreshRate, frameCount, { jump = false, nextLevelFrames = 0, thirdLevelFrames = 0 } = {}) {
+  function runForFrames(refreshRate, frameCount, {
+    jump = false, nextLevelFrames = 0, thirdLevelFrames = 0, onRunComplete = null,
+  } = {}) {
     const frames = new Map();
     let nextId = 0;
     positions.length = 0;
@@ -37,7 +40,7 @@ describe('game simulation speed', () => {
     });
     vi.stubGlobal('cancelAnimationFrame', id => frames.delete(id));
 
-    const view = render(<Game />);
+    const view = render(<Game onRunComplete={onRunComplete} />);
     fireEvent.click(screen.getByText(/skip/i));
     fireEvent.click(screen.getByRole('button', { name: /press start/i }));
     fireEvent.keyDown(window, { code: 'ArrowRight' });
@@ -68,6 +71,7 @@ describe('game simulation speed', () => {
       sector3: Boolean(screen.queryByText('GET READY FOR SECTOR 3-1')),
       allClear: Boolean(screen.queryByText('ALL SECTORS CLEARED!')),
       gameOver: Boolean(screen.queryByText('GAME OVER')),
+      score: Number(screen.getByText('NOVA').parentElement.textContent.replace('NOVA', '')),
     };
     view.unmount();
     cleanup();
@@ -95,7 +99,15 @@ describe('game simulation speed', () => {
   });
 
   it('can complete the third course with normal controls', () => {
-    const run = runForFrames(60, 900, { jump: true, nextLevelFrames: 1100, thirdLevelFrames: 1500 });
+    const onRunComplete = vi.fn();
+    const run = runForFrames(60, 900, {
+      jump: true, nextLevelFrames: 1100, thirdLevelFrames: 1500, onRunComplete,
+    });
     expect(run.allClear, JSON.stringify(run)).toBe(true);
+    expect(onRunComplete).toHaveBeenCalledTimes(1);
+    const completion = onRunComplete.mock.calls[0][0];
+    expect(completion).toMatchObject({ score: run.score, submissionCandidate: true });
+    expect(completion.transcript).toMatchObject({ mode: 'campaign', endedAs: 'win' });
+    expect(replayCampaign(completion.transcript)).toMatchObject({ outcome: 'win', score: run.score, level: 3 });
   });
 });

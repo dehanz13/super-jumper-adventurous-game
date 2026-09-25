@@ -207,7 +207,8 @@ describe('game entry and first frame', () => {
       left: 0, top: 0, width: 800, height: 600,
     });
     vi.stubGlobal('alert', vi.fn());
-    const { container } = render(<Game />);
+    const onRunComplete = vi.fn();
+    const { container } = render(<Game onRunComplete={onRunComplete} />);
     fireEvent.click(screen.getByText(/skip/i));
     fireEvent.click(screen.getByRole('button', { name: /level creator/i }));
     fireEvent.click(screen.getByRole('button', { name: 'Eraser tool' }));
@@ -216,6 +217,10 @@ describe('game entry and first frame', () => {
 
     for (let i = 0; i < 180 && !screen.queryByText('GAME OVER'); i++) stepFrames(1);
     expect(screen.getByText('GAME OVER')).toBeInTheDocument();
+    expect(onRunComplete).toHaveBeenCalledTimes(1);
+    expect(onRunComplete.mock.calls[0][0]).toMatchObject({
+      transcript: { mode: 'custom', endedAs: 'gameover' }, submissionCandidate: false,
+    });
     fireEvent.click(screen.getByRole('button', { name: /try again/i }));
     expect(screen.queryByText('GAME OVER')).not.toBeInTheDocument();
   });

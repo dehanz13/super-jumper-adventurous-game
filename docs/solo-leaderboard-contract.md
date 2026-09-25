@@ -35,7 +35,7 @@ The run service must choose `playerId`, display name, country, board eligibility
 
 ## Work needed before implementation can be trusted
 
-- Run the shared deterministic simulation in a trusted verifier and compare its outcome and score with the submitted claim. Browser play now uses the same fixed step and can replay a completed campaign locally, but a client-supplied transcript alone is insufficient for public ranking. Truncated transcripts must be excluded, with a clear player-facing state when submission is added.
+- Run the shared deterministic simulation in a trusted verifier and compare its outcome and score with the submitted claim. Browser play now uses the same fixed step, and a React gameplay test replays a completed campaign captured through the `onRunComplete` callback. A client-supplied transcript alone is insufficient for public ranking. Truncated transcripts must be excluded, with a clear player-facing state when submission is added.
 - Retain each released level-map content version, gameplay-rules version, and scoring policy in the verifier so a run started on one release can be checked after a new deployment. The browser now stamps these versions into its local transcript; the server must pin them at run start rather than trusting a client claim.
 - Define the guest identity and country collection flow for both standalone and embedded play. The leaderboard rejects unassigned country codes; a guessed default would create false profile data.
 - Define the secure Hearso-to-game identity handoff. An embedded frame must check message origin and must not receive leaderboard credentials or account secrets through a URL.

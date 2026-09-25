@@ -12,9 +12,10 @@ import { appendInputStep, createInputTranscript, sealInputTranscript } from '@/g
 import { takeFixedSteps } from '@/game/fixedStep';
 import { createScoreLedger } from '@/game/scoreLedger';
 import { advanceSimulation } from '@/game/simulation';
+import { createLocalRunCompletion } from '@/game/runCompletion';
 import { createEmptyWorldState, createInitialLevelState, createPlayerState } from '@/game/worldState';
 
-export default function Game() {
+export default function Game({ onRunComplete = null }) {
   const canvasRef = useRef(null);
   const gameLoopRef = useRef(null);
   const keysRef = useRef({});
@@ -190,6 +191,9 @@ export default function Game() {
       if (result.transition.state === 'win') sealInputTranscript(inputTranscriptRef.current, 'win');
       if (result.transition.state === 'gameover') sealInputTranscript(inputTranscriptRef.current, 'gameover');
       setGameState(result.transition.state);
+      if (result.transition.state === 'win' || result.transition.state === 'gameover') {
+        onRunComplete?.(createLocalRunCompletion(inputTranscriptRef.current, scoreLedgerRef.current));
+      }
     }
 
     // Follow the explorer within the portion of the canvas actually visible.
@@ -231,7 +235,7 @@ export default function Game() {
     drawExplorer(ctx, player, world.offset);
 
     gameLoopRef.current = requestAnimationFrame(gameLoop);
-  }, [gameState, level, selectedTool, showGrid]);
+  }, [gameState, level, selectedTool, showGrid, onRunComplete]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
