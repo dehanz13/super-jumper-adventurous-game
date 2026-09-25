@@ -19,7 +19,7 @@ describe('game simulation speed', () => {
     vi.unstubAllGlobals();
   });
 
-  function runForFrames(refreshRate, frameCount, { jump = false } = {}) {
+  function runForFrames(refreshRate, frameCount, { jump = false, nextLevelFrames = 0 } = {}) {
     const frames = new Map();
     let nextId = 0;
     positions.length = 0;
@@ -42,19 +42,25 @@ describe('game simulation speed', () => {
     fireEvent.click(screen.getByRole('button', { name: /press start/i }));
     fireEvent.keyDown(window, { code: 'ArrowRight' });
     if (jump) fireEvent.keyDown(window, { code: 'Space' });
-    act(() => {
-      for (let i = 1; i <= frameCount; i++) {
+    const advance = (start, end) => act(() => {
+      for (let i = start; i <= end; i++) {
         const [id, callback] = frames.entries().next().value;
         frames.delete(id);
         callback(i * 1000 / refreshRate);
       }
     });
+    advance(1, frameCount);
+    if (nextLevelFrames) {
+      fireEvent.click(screen.getByRole('button', { name: /next sector/i }));
+      advance(frameCount + 1, frameCount + nextLevelFrames);
+    }
     fireEvent.keyUp(window, { code: 'ArrowRight' });
     if (jump) fireEvent.keyUp(window, { code: 'Space' });
     const result = {
       x: positions.at(-1).x,
       lives: screen.getByText('LIVES').parentElement.textContent,
       clear: Boolean(screen.queryByText('COURSE CLEAR!')),
+      sector3: Boolean(screen.queryByText('GET READY FOR SECTOR 3-1')),
       gameOver: Boolean(screen.queryByText('GAME OVER')),
     };
     view.unmount();
@@ -75,5 +81,10 @@ describe('game simulation speed', () => {
   it('can complete the first course with normal controls', () => {
     const run = runForFrames(60, 900, { jump: true });
     expect(run.clear, JSON.stringify(run)).toBe(true);
+  });
+
+  it('can reach the second course beacon with normal controls', () => {
+    const run = runForFrames(60, 900, { jump: true, nextLevelFrames: 1100 });
+    expect(run.sector3, JSON.stringify(run)).toBe(true);
   });
 });
