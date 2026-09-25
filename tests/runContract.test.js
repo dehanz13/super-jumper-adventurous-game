@@ -33,6 +33,12 @@ describe('run service contract', () => {
     expect(Transcript.properties.mode.enum).toEqual(['campaign']);
     expect(Transcript.properties.endedAs.enum).toEqual(['win']);
     expect(Versions.required).toEqual(Object.keys(currentRunVersions()));
-    expect(StartRunRequest.oneOf).toEqual([{ required: ['launchTicket'] }, { required: ['guestProfile'] }]);
+    expect(StartRunRequest.oneOf).toEqual([
+      { required: ['launchTicket'] },
+      { required: ['guestProfile'] },
+      { required: ['guestCredential'] },
+    ]);
+    expect(contract.paths['/runs'].post.responses['401']).toBeDefined();
+    expect(contract.components.schemas.StartRunResponse.properties.guestCredential).toBeDefined();
   });
 });
