@@ -21,6 +21,8 @@ Use a dedicated `game-id` for this game; never write to Trivia's game ID. The ex
 
 The client should show the run result immediately. A public rank appears only after the trusted finish service accepts the run and the leaderboard write succeeds. A delayed write should be shown as pending and retried from durable server state; restarting the browser must not be the retry mechanism. The standalone site and Hearso embed should use the same run contract.
 
+Only a verified run that clears the full current campaign is rank eligible. Game Over and abandoned runs keep their local score but must not be submitted for a public rank. The browser's `isSubmissionCandidate` check is an early filter; the server must independently replay the run and enforce this rule.
+
 ## Proposed run contract
 
 The static game calls a new game-owned serverless run service, never `POST /v1/scores` directly. These are proposed operations; they do not exist yet:
@@ -33,11 +35,11 @@ The run service must choose `playerId`, display name, country, board eligibility
 
 ## Work needed before implementation can be trusted
 
-- Extract gameplay rules into a deterministic simulation shared by the browser and verifier. The present loop uses mutable React/Canvas world state and some random or wall-clock behavior; a fixed update rate alone is insufficient for server replay.
+- Extract gameplay rules into a deterministic simulation shared by the browser and verifier. The browser now records a versioned, bounded input transcript, but the present loop still orchestrates mutable world state in React/Canvas. A fixed update rate and client-supplied transcript alone are insufficient for server replay. Truncated transcripts must be excluded from ranking, with a clear player-facing state when submission is added.
 - Version the level maps and scoring policy so a run started on one release is verified against that release after a new deployment.
 - Define the guest identity and country collection flow for both standalone and embedded play. The leaderboard rejects unassigned country codes; a guessed default would create false profile data.
 - Define the secure Hearso-to-game identity handoff. An embedded frame must check message origin and must not receive leaderboard credentials or account secrets through a URL.
-- Confirm whether a run ending in game over is rank eligible, and whether abandoning a run is excluded. Score rules must be identical on standalone and embedded play.
+- Enforce completed-campaign-only eligibility in the trusted finish service. Game Over and abandoned runs are excluded. Score rules must be identical on standalone and embedded play.
 - Confirm the meaning of “one week”: current ISO calendar week or a rolling seven days from each score. A rolling window or removal of historical guest ranks requires backend work beyond the current weekly board selector.
 - Check the deployed leaderboard stage supports `boards`, its credential state, and a dedicated game ID before any production write. Use only a scratch board for integration tests.
 
