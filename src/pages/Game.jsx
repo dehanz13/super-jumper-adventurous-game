@@ -5,7 +5,8 @@ import { soundController } from "@/components/SoundController";
 import { GameOverScreen, WinScreen, StartScreen } from '@/components/GameScreens';
 import IntroScreen from '@/components/IntroScreen';
 import { drawCreature, drawExplorer } from '@/game/characterArt';
-import { PLASMA_COOLDOWN_STEPS, resolvePlasmaHit, resolvePlayerDamage, resolvePlayerEnemyContact } from '@/game/combat';
+import { resolvePlayerEnemyContact } from '@/game/combat';
+import { stepEnemyProjectile, stepPlayerPlasma, tryFirePlasma } from '@/game/projectiles';
 import { isSignalSnareActive, stepEnemyMotion } from '@/game/enemyMotion';
 import { collectShards, resolveBlockHit, stepPowerUps } from '@/game/collectibles';
 import { drawBeacon, drawPickup, drawSpaceBackdrop, drawStarShard, drawTerrain } from '@/game/worldArt';
@@ -14,7 +15,7 @@ import { DIRECTION_KEYS, directionAtPoint, readGameplayInput } from '@/game/inpu
 import { getLevelData, hasNextLevel } from '@/game/levels';
 import { takeFixedSteps } from '@/game/fixedStep';
 import { pointsForEvent } from '@/game/scoring';
-import { GRAVITY, stepPlayerPhysics } from '@/game/playerPhysics';
+import { stepPlayerPhysics } from '@/game/playerPhysics';
 
 export default function Game() {
   const canvasRef = useRef(null);
@@ -348,69 +349,16 @@ export default function Game() {
       }
     }
 
-    // Fireball shooting (press X or Z key)
-    if (player.fireballCooldown > 0) player.fireballCooldown--;
-    if (input.fire && player.powerUp === 'plasma' && player.fireballs.length < 2) {
-      if (player.fireballCooldown === 0) {
-        player.fireballs.push({
-          x: player.x + (player.facingRight ? 40 : 0),
-          y: player.y + 20,
-          velocityX: player.facingRight ? 8 : -8,
-          velocityY: 0
-        });
-        player.fireballCooldown = PLASMA_COOLDOWN_STEPS;
-        soundController.playFireball();
-      }
-    }
-
-    // Update fireballs
-    player.fireballs = player.fireballs.filter(fb => {
-      fb.x += fb.velocityX;
-      fb.velocityY += GRAVITY * 0.5;
-      fb.y += fb.velocityY;
-
-      // Bounce off platforms
-      world.platforms.forEach(platform => {
-        const fbRect = { x: fb.x - 8, y: fb.y - 8, width: 16, height: 16 };
-        if (checkCollision(fbRect, platform)) {
-          if (fb.velocityY > 0) {
-            fb.y = platform.y - 8;
-            fb.velocityY = -6;
-          }
-        }
-      });
-
-      // Apply projectile outcomes after the collision geometry matches.
-      world.enemies.forEach(enemy => {
-        if (enemy.alive) {
-          const fbRect = { x: fb.x - 8, y: fb.y - 8, width: 16, height: 16 };
-          if (checkCollision(fbRect, enemy)) {
-            const outcome = resolvePlasmaHit(enemy);
-            if (outcome) {
-              if (outcome.points) setScore(s => s + outcome.points);
-              if (outcome.sound) soundController[outcome.sound]();
-              fb.y = -100;
-            }
-          }
-        }
-      });
-
-      // Remove if off screen or too low
-      return fb.x > world.offset - 50 && fb.x < world.offset + 850 && fb.y < 650;
+    if (tryFirePlasma(player, input.fire)) soundController.playFireball();
+    stepPlayerPlasma(player, world.platforms, world.enemies, world.offset).forEach(outcome => {
+      if (outcome.points) setScore(score => score + outcome.points);
+      if (outcome.sound) soundController[outcome.sound]();
     });
 
-    // Update enemy projectiles (Warden fire)
-    world.enemyProjectiles = (world.enemyProjectiles || []).filter(proj => {
-      proj.x += proj.velocityX;
-
-      // Animate
-      proj.frame = (proj.frame || 0) + 1;
-
-      // Check collision with player
-      const projRect = { x: proj.x, y: proj.y + 10, width: 40, height: 20 };
-      if (checkCollision(playerHurtbox(player), projRect)) applyContactOutcome(resolvePlayerDamage(player));
-
-      return proj.x > world.offset - 100 && proj.x < world.offset + 900;
+    world.enemyProjectiles = (world.enemyProjectiles || []).filter(projectile => {
+      const outcome = stepEnemyProjectile(projectile, player, world.offset);
+      applyContactOutcome(outcome.contact);
+      return outcome.keep;
     });
 
     // Advance each creature, then resolve player contact at its new position.
