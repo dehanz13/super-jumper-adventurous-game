@@ -1,7 +1,8 @@
 import { LEVEL_SET_VERSION } from './levels';
+import { GAME_RULES_VERSION } from './rulesVersion';
 import { SCORING_VERSION } from './scoring';
 
-export const INPUT_TRANSCRIPT_VERSION = 2;
+export const INPUT_TRANSCRIPT_VERSION = 3;
 export const MAX_INPUT_STEPS = 60 * 60 * 30;
 export const MAX_INPUT_SEGMENTS = 20_000;
 
@@ -13,6 +14,7 @@ export function createInputTranscript(mode = 'campaign') {
     version: INPUT_TRANSCRIPT_VERSION,
     mode,
     levelSetVersion: mode === 'campaign' ? LEVEL_SET_VERSION : null,
+    rulesVersion: GAME_RULES_VERSION,
     scoringVersion: SCORING_VERSION,
     steps: 0, segments: [], truncated: false, endedAs: null,
   };
@@ -53,9 +55,11 @@ export function sealInputTranscript(transcript, outcome) {
 }
 
 export function validateInputTranscript(transcript) {
-  if (transcript.version !== INPUT_TRANSCRIPT_VERSION
+  if (!transcript || typeof transcript !== 'object'
+    || transcript.version !== INPUT_TRANSCRIPT_VERSION
     || (transcript.mode !== 'campaign' && transcript.mode !== 'custom')
     || transcript.levelSetVersion !== (transcript.mode === 'campaign' ? LEVEL_SET_VERSION : null)
+    || transcript.rulesVersion !== GAME_RULES_VERSION
     || transcript.scoringVersion !== SCORING_VERSION
     || (transcript.endedAs !== null && transcript.endedAs !== 'win' && transcript.endedAs !== 'gameover')
     || transcript.truncated
@@ -65,7 +69,9 @@ export function validateInputTranscript(transcript) {
   }
   let total = 0;
   let priorMask = null;
-  for (const [mask, count] of transcript.segments) {
+  for (const segment of transcript.segments) {
+    if (!Array.isArray(segment) || segment.length !== 2) throw new RangeError('Invalid input segment');
+    const [mask, count] = segment;
     decodeInput(mask);
     if (!Number.isSafeInteger(count) || count < 1 || mask === priorMask) {
       throw new RangeError('Invalid input segment');

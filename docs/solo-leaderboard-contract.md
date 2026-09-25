@@ -27,7 +27,7 @@ Only a verified run that clears the full current campaign is rank eligible. Game
 
 The static game calls a new game-owned serverless run service, never `POST /v1/scores` directly. These are proposed operations; they do not exist yet:
 
-1. **Start run:** the service creates a run ID, records server start time, game/scoring version, level sequence, and player class. It returns a short-lived run token and the versioned simulation inputs needed by the client. Hearso account status is checked through a trusted server path. A guest receives a server-issued pseudonymous ID.
+1. **Start run:** the service creates a run ID, records server start time, map/rules/scoring versions, level sequence, and player class. It returns a short-lived run token and the versioned simulation inputs needed by the client. Hearso account status is checked through a trusted server path. A guest receives a server-issued pseudonymous ID.
 2. **Finish run:** the client sends the run ID and its bounded input transcript. The service rejects an expired or reused run and replays it against the pinned game version. It computes score from the same named events in `src/game/scoring.js`; a client-supplied total is diagnostic only. The service records the verified result once, then submits it with a stable `matchId` and `Idempotency-Key` to the leaderboard. Guest submissions select `boards: ["weekly"]`; account submissions select `boards: ["weekly", "alltime"]`.
 3. **Read result:** the client polls the run result until it is verified, rejected, or the leaderboard write is pending/complete. Ranking reads may use the leaderboard's public read API, scoped to this game's ID and current period. The client must not describe a local score as a public rank.
 
@@ -35,8 +35,8 @@ The run service must choose `playerId`, display name, country, board eligibility
 
 ## Work needed before implementation can be trusted
 
-- Extract gameplay rules into a deterministic simulation shared by the browser and verifier. The browser now records a versioned, bounded input transcript, but the present loop still orchestrates mutable world state in React/Canvas. A fixed update rate and client-supplied transcript alone are insufficient for server replay. Truncated transcripts must be excluded from ranking, with a clear player-facing state when submission is added.
-- Retain each released level-map content version and scoring policy in the verifier so a run started on one release can be checked after a new deployment. The browser now stamps both versions into its local transcript; the server must pin them at run start rather than trusting a client claim.
+- Run the shared deterministic simulation in a trusted verifier and compare its outcome and score with the submitted claim. Browser play now uses the same fixed step and can replay a completed campaign locally, but a client-supplied transcript alone is insufficient for public ranking. Truncated transcripts must be excluded, with a clear player-facing state when submission is added.
+- Retain each released level-map content version, gameplay-rules version, and scoring policy in the verifier so a run started on one release can be checked after a new deployment. The browser now stamps these versions into its local transcript; the server must pin them at run start rather than trusting a client claim.
 - Define the guest identity and country collection flow for both standalone and embedded play. The leaderboard rejects unassigned country codes; a guessed default would create false profile data.
 - Define the secure Hearso-to-game identity handoff. An embedded frame must check message origin and must not receive leaderboard credentials or account secrets through a URL.
 - Enforce completed-campaign-only eligibility in the trusted finish service. Game Over and abandoned runs are excluded. Score rules must be identical on standalone and embedded play.
@@ -46,7 +46,7 @@ The run service must choose `playerId`, display name, country, board eligibility
 ## Release sequence
 
 1. Freeze the run and scoring contract, including week semantics and finish eligibility.
-2. Build deterministic simulation and replay tests in this repository; keep custom editor maps out of ranked runs.
+2. Exercise the shared simulation and replay across browser, test, and future verifier runtimes; keep custom editor maps out of ranked runs.
 3. Implement the game-owned serverless run service and durable retry path in a separate backend branch. Validate its contract and failure cases locally before any cloud deployment.
 4. Add the client adapter and visible pending/verified states; test standalone and Hearso embed journeys against the run service.
 5. Add the Hearso library entry and account handoff after its Linear release plan is accessible. Verify guest weekly and account weekly/all-time isolation on a scratch board.
