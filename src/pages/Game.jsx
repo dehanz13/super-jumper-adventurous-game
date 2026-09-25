@@ -12,6 +12,7 @@ import { collectShards, resolveBlockHit, stepPowerUps } from '@/game/collectible
 import { drawBeacon, drawPickup, drawSpaceBackdrop, drawStarShard, drawTerrain } from '@/game/worldArt';
 import { alignGroundEnemy, createEditorCreature, creatureHurtbox, playerHurtbox, rectanglesOverlap as checkCollision } from '@/game/geometry';
 import { DIRECTION_KEYS, directionAtPoint, readGameplayInput } from '@/game/input';
+import { appendInputStep, createInputTranscript, sealInputTranscript } from '@/game/inputTranscript';
 import { getLevelData } from '@/game/levels';
 import { takeFixedSteps } from '@/game/fixedStep';
 import { stepPlayerPhysics } from '@/game/playerPhysics';
@@ -29,6 +30,7 @@ export default function Game() {
   const runEndedRef = useRef(false);
   const runStepRef = useRef(0);
   const scoreLedgerRef = useRef(createScoreLedger());
+  const inputTranscriptRef = useRef(createInputTranscript());
 
   const [gameState, setGameState] = useState('intro'); // intro, start, playing, paused, gameover, win
   const [introPhase, setIntroPhase] = useState(0);
@@ -204,6 +206,7 @@ export default function Game() {
     setLives(outcome.remainingLives);
     if (outcome.state === 'gameover') {
       runEndedRef.current = true;
+      sealInputTranscript(inputTranscriptRef.current, 'gameover');
       setGameState('gameover');
     }
     soundController[outcome.sound]();
@@ -278,6 +281,7 @@ export default function Game() {
     runStepRef.current++;
 
     const input = readGameplayInput(keysRef.current);
+    appendInputStep(inputTranscriptRef.current, input);
     const movement = stepPlayerPhysics(player, input, world.platforms);
     Object.assign(player, movement.player);
     if (movement.jumped) soundController.playJump();
@@ -395,6 +399,7 @@ export default function Game() {
       recordAward(clear.scoreEvent);
       soundController[clear.sound]();
       if (clear.nextLevel) setLevel(clear.nextLevel);
+      else sealInputTranscript(inputTranscriptRef.current, 'win');
       setGameState(clear.state);
     }
 
@@ -608,6 +613,7 @@ export default function Game() {
 
   const resetRunScore = mode => {
     scoreLedgerRef.current = createScoreLedger(mode);
+    inputTranscriptRef.current = createInputTranscript(mode);
     runStepRef.current = 0;
     setScore(0);
     setShards(0);
