@@ -19,4 +19,6 @@ The static site builds and serves locally without an account or backend. The exp
 
 Level layouts live in `src/game/levels/`, while character and environment drawing live in `src/game/characterArt.js` and `src/game/worldArt.js`. This keeps future artwork and level changes separate from the gameplay loop. The game does not currently submit scores or persist custom levels.
 
+The current soundtrack has three looping, code-generated tracks in `src/game/audioTracks.js`, one for each playable level. Gameplay requests named effects through `SoundController`, so future recorded music and effects can replace the sound implementation without changing game rules. Audio starts after the player presses Start, in line with browser audio permissions; pause, level clear, and game over stop the current music loop.
+
 The intended ranking rule is weekly-only for guests and weekly plus all-time for Hearso account holders. The current game is a client-side prototype; score submission will be added only after a trusted finish flow can validate runs.

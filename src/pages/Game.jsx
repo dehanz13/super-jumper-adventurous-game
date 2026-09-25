@@ -273,6 +273,7 @@ export default function Game() {
     player.y += player.velocityY;
 
     // Platform collision
+    const wasOnGround = player.onGround;
     player.onGround = false;
     world.platforms.forEach(platform => {
       if (checkCollision(player, platform)) {
@@ -332,6 +333,8 @@ export default function Game() {
         }
       }
     });
+
+    if (player.onGround && !wasOnGround) soundController.playLand();
 
     // Coin collection
     world.coins.forEach(coin => {
@@ -492,7 +495,7 @@ export default function Game() {
             player.height = 50;
             player.isInvincible = true;
             player.invincibleTimer = 120;
-            soundController.playDie();
+            soundController.playDamage();
           } else {
             setLives(l => {
               const newLives = l - 1;
@@ -501,7 +504,7 @@ export default function Game() {
                   soundController.playDie();
               } else {
                   player.x = 100; player.y = 300; player.velocityX = 0; player.velocityY = 0; player.powerUp = 'small'; player.height = 50; world.offset = 0;
-                  soundController.playDie();
+                  soundController.playDamage();
               }
               return newLives;
             });
@@ -528,16 +531,18 @@ export default function Game() {
               if (player.starTimer > 0) {
                 enemy.alive = false;
                 setScore(s => s + 200);
+                soundController.playKick();
               } else if (player.powerUp !== 'small') {
                 player.powerUp = 'small';
                 player.height = 50;
                 player.isInvincible = true;
                 player.invincibleTimer = 120;
+                soundController.playDamage();
               } else {
                 setLives(l => {
                   const newLives = l - 1;
-                  if (newLives <= 0) setGameState('gameover');
-                  else { player.x = 100; player.y = 300; player.velocityX = 0; player.velocityY = 0; player.powerUp = 'small'; player.height = 50; world.offset = 0; }
+                  if (newLives <= 0) { setGameState('gameover'); soundController.playDie(); }
+                  else { player.x = 100; player.y = 300; player.velocityX = 0; player.velocityY = 0; player.powerUp = 'small'; player.height = 50; world.offset = 0; soundController.playDamage(); }
                   return newLives;
                 });
               }
@@ -570,9 +575,11 @@ export default function Game() {
               enemy.alive = false;
               player.velocityY = JUMP_FORCE / 2;
               setScore(s => s + 800);
+              soundController.playStomp();
             } else if (player.starTimer > 0) {
               enemy.alive = false;
               setScore(s => s + 800);
+              soundController.playKick();
             }
           }
           return;
@@ -633,9 +640,10 @@ export default function Game() {
 
           // Player collision (Body damage)
           if (checkCollision(player, enemy)) {
-             if (player.starTimer > 0) {
+             if (player.starTimer > 0 && !enemy.hitTimer) {
                 enemy.hp--;
                 enemy.hitTimer = 10;
+                soundController.playKick();
                 if (enemy.hp <= 0) {
                    enemy.alive = false;
                    setScore(s => s + 5000);
@@ -649,12 +657,12 @@ export default function Game() {
                     player.height = 50;
                     player.isInvincible = true;
                     player.invincibleTimer = 120;
-                    soundController.playDie();
+                    soundController.playDamage();
                 } else {
                     setLives(l => {
                         const newLives = l - 1;
                         if (newLives <= 0) { setGameState('gameover'); soundController.playDie(); }
-                        else { player.x = 100; player.y = 300; player.velocityX = 0; player.velocityY = 0; player.powerUp = 'small'; player.height = 50; world.offset = 0; soundController.playDie(); }
+                        else { player.x = 100; player.y = 300; player.velocityX = 0; player.velocityY = 0; player.powerUp = 'small'; player.height = 50; world.offset = 0; soundController.playDamage(); }
                         return newLives;
                     });
                 }
@@ -673,6 +681,7 @@ export default function Game() {
                 if (checkCollision(enemy, other)) {
                   other.alive = false;
                   setScore(s => s + 200);
+                  soundController.playKick();
                 }
               }
             });
@@ -727,7 +736,7 @@ export default function Game() {
                 player.height = 50;
                 player.isInvincible = true;
                 player.invincibleTimer = 120;
-                soundController.playDie();
+                soundController.playDamage();
               } else {
                 setLives(l => {
                   const newLives = l - 1;
@@ -737,7 +746,7 @@ export default function Game() {
                   }
                   else {
                       player.x = 100; player.y = 300; player.velocityX = 0; player.velocityY = 0; player.powerUp = 'small'; player.height = 50; world.offset = 0;
-                      soundController.playDie();
+                      soundController.playDamage();
                   }
                   return newLives;
                 });
@@ -751,7 +760,6 @@ export default function Game() {
                 soundController.playKick();
                 player.velocityY = JUMP_FORCE / 2;
                 setScore(s => s + 100);
-                soundController.playKick();
               } else {
                 // Turn into shell
                 enemy.isShell = true;
@@ -760,12 +768,10 @@ export default function Game() {
                 soundController.playStomp();
                 player.velocityY = JUMP_FORCE / 2;
                 setScore(s => s + 100);
-                soundController.playStomp();
               }
             } else if (enemy.isShell && enemy.shellVelocity === 0) {
               // Kick stationary shell
               enemy.shellVelocity = player.facingRight ? 10 : -10;
-              soundController.playKick();
               soundController.playKick();
             } else if (player.starTimer > 0) {
               enemy.alive = false;
@@ -778,7 +784,7 @@ export default function Game() {
                 player.height = 50;
                 player.isInvincible = true;
                 player.invincibleTimer = 120;
-                soundController.playDie();
+                soundController.playDamage();
               } else {
                 setLives(l => {
                   const newLives = l - 1;
@@ -788,7 +794,7 @@ export default function Game() {
                   }
                   else {
                       player.x = 100; player.y = 300; player.velocityX = 0; player.velocityY = 0; player.powerUp = 'small'; player.height = 50; world.offset = 0;
-                      soundController.playDie();
+                      soundController.playDamage();
                   }
                   return newLives;
                 });
@@ -805,14 +811,13 @@ export default function Game() {
               enemy.alive = false;
               setScore(s => s + 200);
               soundController.playKick();
-              soundController.playKick();
             } else if (!player.isInvincible) {
               if (player.powerUp !== 'small') {
                 player.powerUp = 'small';
                 player.height = 50;
                 player.isInvincible = true;
                 player.invincibleTimer = 120;
-                soundController.playDie();
+                soundController.playDamage();
               } else {
                 setLives(l => {
                   const newLives = l - 1;
@@ -822,7 +827,7 @@ export default function Game() {
                   }
                   else {
                       player.x = 100; player.y = 300; player.velocityX = 0; player.velocityY = 0; player.powerUp = 'small'; player.height = 50; world.offset = 0;
-                      soundController.playDie();
+                      soundController.playDamage();
                   }
                   return newLives;
                 });
@@ -855,12 +860,14 @@ export default function Game() {
         const newLives = l - 1;
         if (newLives <= 0) {
           setGameState('gameover');
+          soundController.playDie();
         } else {
           player.x = 100;
           player.y = 300;
           player.velocityX = 0;
           player.velocityY = 0;
           world.offset = 0;
+          soundController.playDamage();
         }
         return newLives;
       });
@@ -1072,6 +1079,7 @@ export default function Game() {
 
   const startGame = () => {
     soundController.init();
+    soundController.playSelect();
     soundController.playBGM(1);
     setLevel(1);
     initLevel(1);
@@ -1082,12 +1090,14 @@ export default function Game() {
   };
 
   const nextLevel = () => {
+    soundController.playSelect();
     soundController.playBGM(level);
     initLevel(level);
     setGameState('playing');
   };
 
   const togglePause = () => {
+    soundController.playSelect();
     setGameState(s => {
       const next = s === 'playing' ? 'paused' : 'playing';
       if (next === 'paused') soundController.stopBGM();

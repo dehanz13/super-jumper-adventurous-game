@@ -7,8 +7,8 @@ vi.mock('../src/components/SoundController', () => ({
   soundController: {
     init: vi.fn(), playBGM: vi.fn(), stopBGM: vi.fn(), toggleMute: vi.fn(() => true),
     playJump: vi.fn(), playPowerUp: vi.fn(), playCoin: vi.fn(), playStomp: vi.fn(),
-    playDie: vi.fn(), playStageClear: vi.fn(), playFireball: vi.fn(),
-    playBump: vi.fn(), playKick: vi.fn(),
+    playDie: vi.fn(), playStageClear: vi.fn(), playFireball: vi.fn(), playLand: vi.fn(),
+    playBump: vi.fn(), playKick: vi.fn(), playDamage: vi.fn(), playSelect: vi.fn(),
   },
 }));
 
@@ -164,6 +164,7 @@ describe('game entry and first frame', () => {
     stepFrames(120);
     fireEvent.keyUp(window, { code: 'Space' });
     fireEvent.keyUp(window, { code: 'ArrowRight' });
+    expect(soundController.playLand).toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Toggle sound' }));
     fireEvent.click(screen.getByRole('button', { name: 'Pause game' }));
