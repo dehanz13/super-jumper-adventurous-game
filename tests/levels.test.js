@@ -41,4 +41,14 @@ describe('playable level registry', () => {
       expect(ground, `No ground under ${enemy.type} at x=${enemy.x}`).toBeDefined();
     }
   });
+
+  it('keeps an elevated route above the Level 3 Warden to the beacon', () => {
+    const level = getLevelData(3);
+    const warden = level.enemies.find(enemy => enemy.type === 'warden');
+    const bypass = level.platforms.find(platform => platform.type === 'brick'
+      && platform.x < warden.x
+      && platform.x + platform.width > level.flag.x
+      && platform.y + platform.height < warden.y);
+    expect(bypass).toBeDefined();
+  });
 });

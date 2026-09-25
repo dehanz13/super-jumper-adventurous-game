@@ -16,9 +16,9 @@ The current simulation moves horizontally at 5 pixels per step. A jump starts at
 
 ## Level 3 — Orbital Spires
 
-**Skill:** Combine short platform jumps, a vertical climb, and recovery landings. A player can read the next platform before committing to a jump; required rises stay within the current jump envelope. The final section is a distinct encounter, with space to approach the Warden and recover from damage.
+**Skill:** Combine short platform jumps, an optional vertical climb, and recovery landings. A player can read the next platform before committing to a jump; required rises stay within the current jump envelope. The final section is a distinct encounter, with space to approach the Warden and recover from damage.
 
-**Encounter pacing:** Keep the early bridge free of dense enemy groups while the player learns narrow landings. Use familiar creatures on wide islands, then introduce the Hovermite above a safe area. If the Warden is required to defeat, a reliable combat pickup and an explained attack control must appear before the encounter; otherwise the beacon remains reachable without defeating it.
+**Encounter pacing:** Keep the early bridge free of dense enemy groups while the player learns narrow landings. Use familiar creatures on wide islands, then introduce the Hovermite above a safe area. Ground islands beneath the tower and late gauntlet provide recovery options while the upper route rewards skilled jumps. The Warden occupies the final ground approach; an elevated bridge reaches the beacon without requiring combat or a pickup.
 
 **Acceptance:** Keyboard and touch playthroughs can reach the beacon using ordinary controls. The tower and final approach have verified landing paths. The boss cannot block completion indefinitely, and no required route depends on an unspawned pickup.
 

@@ -22,10 +22,12 @@ const level = {
 
     // Ground section
     { x: 1400, y: 500, width: 250, height: 100, type: 'ground' },
+    // The tower is a high-reward route above recoverable ground.
+    { x: 1600, y: 500, width: 800, height: 100, type: 'ground' },
 
     // Vertical tower climb
     { x: 1700, y: 450, width: 60, height: 30, type: 'brick' },
-    { x: 1650, y: 380, width: 60, height: 30, type: 'brick' },
+    { x: 1800, y: 380, width: 60, height: 30, type: 'brick' },
     { x: 1720, y: 310, width: 60, height: 30, type: 'question' },
     { x: 1650, y: 240, width: 60, height: 30, type: 'brick' },
     { x: 1720, y: 170, width: 60, height: 30, type: 'brick' },
@@ -45,6 +47,10 @@ const level = {
 
     // Ground checkpoint
     { x: 2450, y: 500, width: 200, height: 100, type: 'ground' },
+    // Recovery islands beneath the optional aerial gauntlet.
+    { x: 2650, y: 500, width: 450, height: 100, type: 'ground' },
+    { x: 3250, y: 500, width: 400, height: 100, type: 'ground' },
+    { x: 3800, y: 500, width: 400, height: 100, type: 'ground' },
 
     // Gauntlet - alternating heights
     { x: 2720, y: 420, width: 40, height: 30, type: 'brick' },
@@ -64,6 +70,7 @@ const level = {
 
     // Final platform
     { x: 3700, y: 300, width: 150, height: 30, type: 'brick' },
+    { x: 3850, y: 380, width: 350, height: 30, type: 'brick' },
     { x: 3900, y: 500, width: 300, height: 100, type: 'ground' },
   ],
   coins: [
@@ -128,13 +135,8 @@ const level = {
     // Hovermite in sky
     { x: 1700, y: 80, width: 40, height: 48, velocityX: 1.5, alive: true, type: 'hovermite', spawnTimer: 0 },
     // Checkpoint area
-    { x: 2480, y: 455, width: 40, height: 48, velocityX: -3, alive: true, type: 'rollpod', isShell: false, shellVelocity: 0 },
-    { x: 2550, y: 455, width: 36, height: 36, velocityX: -2.5, alive: true, type: 'prismite' },
     { x: 2620, y: 455, width: 40, height: 40, velocityX: -3, alive: true, type: 'pebblit' },
     // Final ground
-    { x: 3950, y: 455, width: 36, height: 36, velocityX: -3.5, alive: true, type: 'prismite' },
-    { x: 4050, y: 455, width: 40, height: 48, velocityX: -3, alive: true, type: 'rollpod', isShell: false, shellVelocity: 0 },
-    { x: 4100, y: 455, width: 40, height: 40, velocityX: -3.5, alive: true, type: 'pebblit' },
     { x: 4000, y: 436, width: 64, height: 64, velocityX: 0, alive: true, type: 'warden', hp: 10, maxHp: 10, fireTimer: 0, jumpTimer: 0, facingLeft: true },
   ],
   powerUps: [
