@@ -10,12 +10,13 @@ import { stepEnemyProjectile, stepPlayerPlasma, tryFirePlasma } from '@/game/pro
 import { isSignalSnareActive, stepEnemyMotion } from '@/game/enemyMotion';
 import { collectShards, resolveBlockHit, stepPowerUps } from '@/game/collectibles';
 import { drawBeacon, drawPickup, drawSpaceBackdrop, drawStarShard, drawTerrain } from '@/game/worldArt';
-import { alignGroundEnemy, beaconFinishBounds, createEditorCreature, creatureHurtbox, playerHurtbox, rectanglesOverlap as checkCollision } from '@/game/geometry';
+import { alignGroundEnemy, createEditorCreature, creatureHurtbox, playerHurtbox, rectanglesOverlap as checkCollision } from '@/game/geometry';
 import { DIRECTION_KEYS, directionAtPoint, readGameplayInput } from '@/game/input';
-import { getLevelData, hasNextLevel } from '@/game/levels';
+import { getLevelData } from '@/game/levels';
 import { takeFixedSteps } from '@/game/fixedStep';
 import { pointsForEvent } from '@/game/scoring';
 import { stepPlayerPhysics } from '@/game/playerPhysics';
+import { resolveCourseClear, resolveLifeLoss } from '@/game/runProgress';
 
 export default function Game() {
   const canvasRef = useRef(null);
@@ -191,27 +192,14 @@ export default function Game() {
 
   const loseLife = useCallback(() => {
     if (runEndedRef.current) return;
-    const remaining = livesRef.current - 1;
-    livesRef.current = remaining;
-    setLives(remaining);
-    if (remaining <= 0) {
+    const outcome = resolveLifeLoss(livesRef.current, playerRef.current, worldRef.current);
+    livesRef.current = outcome.remainingLives;
+    setLives(outcome.remainingLives);
+    if (outcome.state === 'gameover') {
       runEndedRef.current = true;
       setGameState('gameover');
-      soundController.playDie();
-      return;
     }
-
-    const player = playerRef.current;
-    player.x = 100;
-    player.y = 300;
-    player.velocityX = 0;
-    player.velocityY = 0;
-    player.powerUp = 'small';
-    player.height = 50;
-    player.isInvincible = true;
-    player.invincibleTimer = 90;
-    worldRef.current.offset = 0;
-    soundController.playDamage();
+    soundController[outcome.sound]();
   }, []);
 
   const gameLoop = useCallback((timestamp) => {
@@ -393,19 +381,13 @@ export default function Game() {
     // Remove enemies that fall off screen
     world.enemies = world.enemies.filter(e => e.y < 700 && e.alive);
 
-    // Flag (win condition)
-    if (world.flag && checkCollision(player, beaconFinishBounds(world.flag))) {
+    const clear = resolveCourseClear(player, world.flag, level, runEndedRef.current);
+    if (clear) {
       runEndedRef.current = true;
-      setScore(s => s + pointsForEvent('sectorClear'));
-      soundController.playStageClear();
-      if (hasNextLevel(level)) {
-        // Next level
-        setLevel(l => l + 1);
-        setGameState('levelcomplete');
-      } else {
-        // Beat all levels
-        setGameState('win');
-      }
+      setScore(score => score + clear.points);
+      soundController[clear.sound]();
+      if (clear.nextLevel) setLevel(clear.nextLevel);
+      setGameState(clear.state);
     }
 
     // Fall death
