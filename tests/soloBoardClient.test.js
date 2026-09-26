@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createSoloBoardClient, currentUtcWeek, SoloBoardError } from '../src/game/soloBoardClient.js';
+import { createSoloBoardClient, currentUtcWeek, nextUtcWeekBoundary, SoloBoardError } from '../src/game/soloBoardClient.js';
 
 const page = period => ({
   gameId: 'nova-orbit-jump', variant: 'alltopics', period, playerCount: 1,
@@ -13,6 +13,12 @@ describe('solo board public read client', () => {
     expect(currentUtcWeek(Date.parse('2027-01-04T00:00:00Z'))).toBe('weekly-2027-W01');
     expect(currentUtcWeek(Date.parse('2026-09-27T23:59:59Z'))).toBe('weekly-2026-W39');
     expect(currentUtcWeek(Date.parse('2026-09-28T00:00:00Z'))).toBe('weekly-2026-W40');
+  });
+
+  it('finds the next UTC Monday even at a year boundary', () => {
+    expect(nextUtcWeekBoundary(Date.parse('2026-09-27T23:59:59.800Z'))).toBe(Date.parse('2026-09-28T00:00:00Z'));
+    expect(nextUtcWeekBoundary(Date.parse('2026-09-28T00:00:00Z'))).toBe(Date.parse('2026-10-05T00:00:00Z'));
+    expect(nextUtcWeekBoundary(Date.parse('2027-01-01T12:00:00Z'))).toBe(Date.parse('2027-01-04T00:00:00Z'));
   });
 
   it('reads only the current game board with contract headers and no credentials', async () => {

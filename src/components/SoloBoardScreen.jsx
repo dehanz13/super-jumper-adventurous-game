@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { nextUtcWeekBoundary } from '@/game/soloBoardClient';
 
 export function SoloBoardScreen({ getBoard, onBack, rankedStatus = '' }) {
   const [board, setBoard] = useState('weekly');
@@ -20,6 +21,13 @@ export function SoloBoardScreen({ getBoard, onBack, rankedStatus = '' }) {
     });
     return () => controller.abort();
   }, [board, getBoard, refresh, rankedStatus]);
+
+  useEffect(() => {
+    if (board !== 'weekly') return undefined;
+    const nowMs = Date.now();
+    const timer = setTimeout(() => setRefresh(value => value + 1), nextUtcWeekBoundary(nowMs) - nowMs);
+    return () => clearTimeout(timer);
+  }, [board, refresh]);
 
   return (
     <section aria-label="Nova solo leaderboard" className="absolute inset-0 overflow-y-auto bg-[#10172E] px-4 py-5 text-white font-mono">
