@@ -13,6 +13,7 @@
     "test:dynamo-local": "REQUIRE_DYNAMO_LOCAL=1 vitest run tests/dynamoRunStore.integration.test.js",
     "test:e2e": "playwright test",
     "test:e2e:ranked": "playwright test -c playwright.ranked.config.js",
+    "test:e2e:real-run": ": ${DYNAMODB_LOCAL_ENDPOINT:?DynamoDB Local endpoint is required} && playwright test -c playwright.ranked.config.js real-run.spec.js",
     "infra:synth": "cdk synth --output cdk.out",
     "infra:typecheck": "tsc -p infra/tsconfig.json",
     "typecheck": "tsc -p ./jsconfig.json && tsc -p ./jsconfig.server.json && npm run infra:typecheck",
