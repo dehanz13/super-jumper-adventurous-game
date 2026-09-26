@@ -542,9 +542,14 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
                     { type: 'enemy', subType: 'prismite', label: 'Prismite', color: '#F38173' },
                     { type: 'enemy', subType: 'hovermite', label: 'Hovermite', color: '#E7FAFF' },
                     { type: 'enemy', subType: 'warden', label: 'Warden', color: '#6756B8' },
+                    { type: 'enemy', subType: 'skitter', label: 'Skitter', color: '#F38173' },
+                    { type: 'enemy', subType: 'orbitSkimmer', label: 'Orbit Skimmer', color: '#28D9CF' },
+                    { type: 'enemy', subType: 'pulseDrone', label: 'Pulse Drone', color: '#F4DB70' },
                     { type: 'powerup', subType: 'powerCell', label: 'Power Cell', color: '#28D9CF' },
                     { type: 'powerup', subType: 'plasma', label: 'Plasma Core', color: '#F38173' },
                     { type: 'powerup', subType: 'spectrum', label: 'Spectrum Shield', color: '#F4DB70' },
+                    { type: 'powerup', subType: 'armor', label: 'Armor', color: '#28D9CF' },
+                    { type: 'powerup', subType: 'heart', label: 'Heart', color: '#F38173' },
                     { type: 'flag', subType: 'flag', label: 'Beacon', color: '#28D9CF' },
                 ].map((item, i) => (
                     <button

@@ -36,7 +36,8 @@ export function drawExplorer(ctx, player, offset, animationTime = Date.now()) {
   const step = Math.floor(animationTime / 110) % 2;
   const blink = Math.floor(animationTime / 1800) % 5 === 4;
   const pulse = Math.floor(animationTime / 320) % 2 === 0;
-  const suit = player.powerUp === 'plasma' ? COLORS.ember : COLORS.suit;
+  const armored = player.armorTimer > 0;
+  const suit = armored ? '#236B79' : player.powerUp === 'plasma' ? COLORS.ember : COLORS.suit;
   const trim = player.starTimer > 0
     ? [COLORS.trim, COLORS.visor, COLORS.ember][Math.floor(animationTime / 80) % 3]
     : COLORS.trim;
@@ -88,6 +89,19 @@ export function drawExplorer(ctx, player, offset, animationTime = Date.now()) {
   pixel(COLORS.outline, 7, 11, 2, 2);
   pixel(COLORS.boot, 2, leftFoot, 4);
   pixel(COLORS.boot, 7, rightFoot, 4);
+
+  if (armored) {
+    // Gold shoulder and shin plates change both palette and silhouette.
+    pixel(COLORS.outline, 0, 6, 3, 3);
+    pixel(COLORS.outline, 10, 6, 3, 3);
+    pixel(COLORS.visor, 0, 6, 3, 2);
+    pixel(COLORS.visor, 10, 6, 3, 2);
+    pixel(COLORS.trim, 1, 8, 2, 2);
+    pixel(COLORS.trim, 10, 8, 2, 2);
+    pixel(COLORS.visor, 3, 11, 3, 1);
+    pixel(COLORS.visor, 7, 11, 3, 1);
+    pixel(pulse ? COLORS.ice : COLORS.trim, 5, 2, 3, 1);
+  }
 
   ctx.restore();
 }
@@ -161,6 +175,39 @@ export function drawCreature(ctx, enemy, offset) {
     ellipse(ctx, COLORS.visor, x + 20, enemy.y + 20, 7, 5);
     rectangle(ctx, COLORS.trim, x + 4, enemy.y + 35, 6, 4);
     rectangle(ctx, COLORS.trim, x + 30, enemy.y + 35, 6, 4);
+  } else if (enemy.type === 'skitter') {
+    // Four quick legs and a forward eye distinguish this charger from Pebblit.
+    rectangle(ctx, COLORS.outline, x + 4, foot - 29, 34, 22);
+    rectangle(ctx, COLORS.ember, x + 7, foot - 26, 28, 16);
+    rectangle(ctx, COLORS.visor, x + 25, foot - 22, 7, 6);
+    rectangle(ctx, COLORS.outline, x + 29, foot - 20, 2, 2);
+    for (const leg of [5, 13, 23, 31]) {
+      rectangle(ctx, COLORS.outline, x + leg + (phase ? 2 : 0), foot - 8, 5, 8);
+      rectangle(ctx, COLORS.trim, x + leg + (phase ? 2 : 0), foot - 5, 3, 3);
+    }
+    rectangle(ctx, COLORS.ice, x + 9, foot - 33, 9, 4);
+  } else if (enemy.type === 'orbitSkimmer') {
+    // Split luminous wings and a suspended cockpit signal aerial dashes.
+    rectangle(ctx, COLORS.outline, x + 2, foot - 23, 40, 12);
+    rectangle(ctx, COLORS.trim, x + 4, foot - 21, 13, 7);
+    rectangle(ctx, COLORS.trim, x + 27, foot - 21, 13, 7);
+    ellipse(ctx, COLORS.outline, x + 22, foot - 23, 13, 15);
+    ellipse(ctx, COLORS.suit, x + 22, foot - 23, 10, 12);
+    rectangle(ctx, COLORS.ice, x + 17, foot - 28, 10, 7);
+    rectangle(ctx, COLORS.visor, x + 20, foot - 25, 4, 3);
+    rectangle(ctx, COLORS.visor, x + 7, foot - 9 - phase * 2, 5, 4);
+    rectangle(ctx, COLORS.visor, x + 32, foot - 9 + phase * 2, 5, 4);
+  } else if (enemy.type === 'pulseDrone') {
+    // A fixed antenna and bright emitter telegraph the ranged attack.
+    rectangle(ctx, COLORS.outline, x + 6, foot - 39, 34, 31);
+    rectangle(ctx, COLORS.suit, x + 9, foot - 36, 28, 24);
+    rectangle(ctx, COLORS.trim, x + 13, foot - 34, 20, 8);
+    ellipse(ctx, COLORS.ember, x + 23, foot - 20, 9, 8);
+    ellipse(ctx, COLORS.visor, x + 23, foot - 20, 4, 4);
+    rectangle(ctx, COLORS.outline, x + 20, foot - 48, 6, 10);
+    rectangle(ctx, COLORS.visor, x + 18, foot - 50, 10, 4);
+    rectangle(ctx, COLORS.boot, x + 4, foot - 8, 13, 8);
+    rectangle(ctx, COLORS.boot, x + 29, foot - 8, 13, 8);
   } else if (enemy.type === 'warden') {
     // Warden: a tall, one-eyed robot guarding the course beacon.
     rectangle(ctx, COLORS.outline, x + 7, foot - 60, 50, 55);

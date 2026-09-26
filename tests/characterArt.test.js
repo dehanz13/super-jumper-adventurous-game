@@ -42,4 +42,12 @@ describe('explorer visual animation', () => {
     expect(awake.marks).not.toEqual(stepping.marks);
     expect(playerSpriteBounds({ x: 100, y: 450, width: 40, height: 50, powerUp: 'small' }).y).toBe(450);
   });
+
+  it('adds visible shoulder and shin armor while the power is active', () => {
+    const normal = paintAt(0);
+    const armored = paintAt(0, { height: 65, powerUp: 'armor', armorTimer: 600 });
+    expect(armored.marks.length).toBeGreaterThan(normal.marks.length);
+    expect(armored.marks.some(mark => mark.color === '#236B79')).toBe(true);
+    expect(armored.marks.some(mark => mark.color === '#F4DB70' && mark.x === 0)).toBe(true);
+  });
 });

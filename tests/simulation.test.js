@@ -18,6 +18,33 @@ describe('shared campaign simulation', () => {
     expect(state.world.coins.some(coin => coin.collected)).toBe(true);
   });
 
+  it('adds one uncapped life from a heart and expires armor on the 600th step', () => {
+    const state = createSimulationState();
+    state.lives = 5;
+    state.world.platforms = [];
+    state.world.enemies = [];
+    state.world.coins = [];
+    state.world.flag = null;
+    state.world.powerUps = [
+      { x: 100, y: 300, type: 'heart', spawned: true, collected: false },
+      { x: 100, y: 300, type: 'armor', spawned: true, collected: false },
+    ];
+    const first = advanceSimulation(state, idle);
+    expect(first).toMatchObject({ livesChanged: true, sounds: ['playLife', 'playPowerUp'] });
+    expect(state.lives).toBe(6);
+    expect(state.player).toMatchObject({ powerUp: 'armor', height: 65, armorTimer: 599 });
+    state.world.platforms = [{ x: 0, y: 500, width: 11_000, height: 100, type: 'ground' }];
+    state.player.x = 10_000;
+    state.player.y = 435;
+    state.player.velocityY = 0;
+    state.player.onGround = true;
+    for (let step = 1; step < 599; step++) advanceSimulation(state, idle);
+    expect(state.player.armorTimer).toBe(1);
+    advanceSimulation(state, idle);
+    expect(state.player).toMatchObject({ powerUp: 'small', height: 50, armorTimer: 0 });
+    expect(state.lives).toBe(6);
+  });
+
   it('reports a sector clear and a final life loss from the same rules used by the page', () => {
     const state = createSimulationState();
     state.player.x = state.world.flag.x;
@@ -42,7 +69,7 @@ describe('shared campaign simulation', () => {
     const live = createSimulationState();
     const held = { left: false, right: true, jump: true, fire: false };
     let transition = null;
-    for (let i = 0; i < 3000; i++) {
+    for (let i = 0; i < 12000; i++) {
       if (transition === 'levelcomplete') {
         const next = createInitialLevelState(live.level + 1);
         live.player = next.player;
@@ -57,7 +84,7 @@ describe('shared campaign simulation', () => {
     expect(transition).toBe('win');
     sealInputTranscript(transcript, 'win');
     const verified = replayCampaign(transcript);
-    expect(verified).toMatchObject({ outcome: 'win', score: live.ledger.total, level: 3, lives: live.lives });
+    expect(verified).toMatchObject({ outcome: 'win', score: live.ledger.total, level: 7, lives: live.lives });
     expect(verified.ledger.events).toEqual(live.ledger.events);
     expect(() => replayCampaign({ ...transcript, endedAs: 'gameover' })).toThrow('outcome differs');
     expect(() => replayCampaign({ ...transcript, mode: 'custom' })).toThrow('campaign transcript');

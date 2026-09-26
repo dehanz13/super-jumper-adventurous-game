@@ -9,9 +9,9 @@ import { resolveCourseClear, resolveLifeLoss } from './runProgress';
 import { createScoreLedger, recordScoreEvent } from './scoreLedger';
 import { createInitialLevelState } from './worldState';
 
-export function createSimulationState(level = 1) {
+export function createSimulationState(level = 1, finalLevel = null) {
   const { player, world } = createInitialLevelState(level);
-  return { player, world, level, lives: 3, step: 0, runEnded: false, ledger: createScoreLedger() };
+  return { player, world, level, finalLevel, lives: 3, step: 0, runEnded: false, ledger: createScoreLedger() };
 }
 
 // The caller owns presentation. This mutates only the supplied simulation state.
@@ -80,7 +80,17 @@ export function advanceSimulation(state, input) {
   const powerUps = stepPowerUps(world.powerUps, world.platforms, player);
   if (powerUps.length) {
     award('powerUp', powerUps.length);
-    powerUps.forEach(() => result.sounds.push('playPowerUp'));
+    powerUps.forEach(type => result.sounds.push(type === 'heart' ? 'playLife' : 'playPowerUp'));
+    const hearts = powerUps.filter(type => type === 'heart').length;
+    if (hearts) {
+      state.lives += hearts;
+      result.livesChanged = true;
+    }
+  }
+  if (player.armorTimer > 0 && --player.armorTimer === 0) {
+    player.y += player.height - 50;
+    player.powerUp = 'small';
+    player.height = 50;
   }
   if (player.starTimer > 0 && --player.starTimer <= 0) player.isInvincible = false;
   if (player.invincibleTimer > 0 && --player.invincibleTimer <= 0) player.isInvincible = false;
@@ -118,7 +128,7 @@ export function advanceSimulation(state, input) {
   });
   world.enemies = world.enemies.filter(enemy => enemy.y < 700 && enemy.alive);
 
-  const clear = resolveCourseClear(player, world.flag, state.level, state.runEnded);
+  const clear = resolveCourseClear(player, world.flag, state.level, state.runEnded, state.finalLevel);
   if (clear) {
     state.runEnded = true;
     award(clear.scoreEvent);
@@ -129,11 +139,11 @@ export function advanceSimulation(state, input) {
   return result;
 }
 
-export function replayCampaign(transcript) {
+function replayWithProfile(transcript, versions, finalLevel) {
   if (transcript.mode !== 'campaign') throw new RangeError('Campaign replay requires a campaign transcript');
-  const state = createSimulationState();
+  const state = createSimulationState(1, finalLevel);
   let outcome = null;
-  for (const input of replayInputTranscript(transcript)) {
+  for (const input of replayInputTranscript(transcript, versions)) {
     if (outcome === 'levelcomplete') {
       const next = createInitialLevelState(state.level + 1);
       state.player = next.player;
@@ -148,4 +158,12 @@ export function replayCampaign(transcript) {
   }
   if (outcome !== transcript.endedAs) throw new Error('Transcript outcome differs from simulation');
   return { outcome, score: state.ledger.total, ledger: state.ledger, level: state.level, lives: state.lives };
+}
+
+export function replayCampaign(transcript) {
+  return replayWithProfile(transcript, undefined, 7);
+}
+
+export function replayLegacyCampaign(transcript, versions) {
+  return replayWithProfile(transcript, versions, 3);
 }

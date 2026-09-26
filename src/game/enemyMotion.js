@@ -36,6 +36,42 @@ export function stepEnemyMotion(enemy, player, platforms, enemies) {
     return outcome;
   }
 
+  if (enemy.type === 'orbitSkimmer') {
+    enemy.anchorX ??= enemy.x;
+    enemy.timer = (enemy.timer || 0) + 1;
+    enemy.y = enemy.baseY + Math.sin(enemy.timer * 0.06) * 22;
+    enemy.dashTimer = (enemy.dashTimer || 0) + 1;
+    if (enemy.dashTimer >= 105 && Math.abs(player.x - enemy.x) < 260) {
+      enemy.dashTimer = 0;
+      enemy.dashTicks = 14;
+      enemy.velocityX = player.x < enemy.x ? -Math.abs(enemy.velocityX) : Math.abs(enemy.velocityX);
+    }
+    if (enemy.dashTicks > 0) {
+      enemy.x += Math.sign(enemy.velocityX) * 6;
+      enemy.dashTicks--;
+    } else {
+      enemy.x += enemy.velocityX;
+      if (Math.abs(enemy.x - enemy.anchorX) > 110) enemy.velocityX *= -1;
+    }
+    return outcome;
+  }
+
+  if (enemy.type === 'pulseDrone') {
+    if (Math.abs(player.x - enemy.x) >= 500) return outcome;
+    enemy.fireTimer = (enemy.fireTimer || 0) + 1;
+    if (enemy.fireTimer >= enemy.fireInterval) {
+      enemy.fireTimer = 0;
+      const left = player.x < enemy.x;
+      outcome.projectile = {
+        x: left ? enemy.x - 30 : enemy.x + enemy.width,
+        y: enemy.y + 10,
+        velocityX: left ? -5 : 5,
+        type: 'plasma', frame: 0,
+      };
+    }
+    return outcome;
+  }
+
   if (enemy.type === 'warden') {
     enemy.facingLeft = player.x < enemy.x;
     if (enemy.hitTimer > 0) enemy.hitTimer--;
@@ -88,6 +124,9 @@ export function stepEnemyMotion(enemy, player, platforms, enemies) {
       });
     }
   } else {
+    if (enemy.type === 'skitter' && Math.abs(player.x - enemy.x) < 220) {
+      enemy.velocityX = (player.x < enemy.x ? -1 : 1) * Math.max(3, Math.abs(enemy.velocityX));
+    }
     enemy.x += enemy.velocityX;
   }
 

@@ -9,7 +9,7 @@ Create each independent parent branch from the current `develop` branch. A depen
 1. `feature/foundation`: remove the hosted-builder wiring, trim unused code, establish tests and CI, and document the runtime.
 2. `feature/gameplay`: repair the update loop, align collision boxes and sprites, calibrate level geometry, and support keyboard plus touch input.
 3. `feature/original-art`: replace characters, enemies, names, scenes, audio cues, and all other recognizable borrowed presentation; review every level and screen.
-4. `feature/level-foundation`: start each new run at Level 1, separate level maps from the game loop, and prepare the current Level 2 and 3 maps for later design work. Levels 4–10 are future scope.
+4. `feature/level-foundation`: start each new run at Level 1, separate level maps from the game loop, and prepare Levels 2 and 3 for design work. Levels 4–7 now extend that foundation; Levels 8–10 remain future scope.
 5. `feature/audio-foundation`: cover gameplay actions with sound effects, keep three distinct looping tracks, and make music and effects replaceable.
 6. `feature/contact-calibration`: align damage and stomp contact with visible characters and give editor creatures their intended dimensions.
 7. `feature/fixed-step-game-loop`: advance gameplay at 60 simulation steps per second across 30, 60, and 120 Hz displays and guard life loss during catch-up frames.

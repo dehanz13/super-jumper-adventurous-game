@@ -39,9 +39,11 @@ describe('run progress', () => {
       state: 'levelcomplete', nextLevel: 2, scoreEvent: 'sectorClear', sound: 'playStageClear',
     });
     expect(resolveCourseClear(player, beacon, 2, false).nextLevel).toBe(3);
-    expect(resolveCourseClear(player, beacon, 3, false)).toEqual({
+    expect(resolveCourseClear(player, beacon, 3, false).nextLevel).toBe(4);
+    expect(resolveCourseClear(player, beacon, 7, false)).toEqual({
       state: 'win', nextLevel: null, scoreEvent: 'sectorClear', sound: 'playStageClear',
     });
+    expect(resolveCourseClear(player, beacon, 3, false, 3).state).toBe('win');
     expect(resolveCourseClear(player, beacon, 3, true)).toBeNull();
   });
 

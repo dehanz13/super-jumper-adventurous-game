@@ -24,7 +24,7 @@ The current simulation moves horizontally at 5 pixels per step. A jump starts at
 
 ## Shared verification
 
-- New runs still start at Level 1; completed sectors advance in order, and Level 3 is the last available sector for now.
+- New runs still start at Level 1; completed sectors advance in order through Level 7. The design contract for Levels 4–7 lives in [armor-hearts-levels-4-7.md](armor-hearts-levels-4-7.md).
 - Fixed-step tests remain valid at 30, 60, and 120 Hz; the maps do not change physics constants to force a route.
 - Visual checks compare drawn sprites and terrain with their contact areas on desktop and mobile.
 - Each level gets a real loop route check and a browser completion check before its design is called finished.

@@ -21,6 +21,7 @@ export function resolveLifeLoss(lives, player, world) {
     isInvincible: true,
     invincibleTimer: RESPAWN.invincibleSteps,
     starTimer: 0,
+    armorTimer: 0,
     fireballCooldown: 0,
     fireballs: [],
   });
@@ -29,9 +30,9 @@ export function resolveLifeLoss(lives, player, world) {
   return { remainingLives, state: 'playing', sound: 'playDamage' };
 }
 
-export function resolveCourseClear(player, flag, level, runEnded) {
+export function resolveCourseClear(player, flag, level, runEnded, finalLevel = null) {
   if (runEnded || !flag || !rectanglesOverlap(player, beaconFinishBounds(flag))) return null;
-  const advances = hasNextLevel(level);
+  const advances = finalLevel === null ? hasNextLevel(level) : level < finalLevel;
   return {
     state: advances ? 'levelcomplete' : 'win',
     nextLevel: advances ? level + 1 : null,

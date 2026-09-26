@@ -132,6 +132,23 @@ class SoundController {
     osc.stop(t + 0.6);
   }
 
+  playLife() {
+    if (!this.ctx || this.isMuted) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    [523.25, 659.25, 783.99, 1046.5].forEach((frequency, index) => {
+      osc.frequency.setValueAtTime(frequency, t + index * 0.09);
+    });
+    gain.gain.setValueAtTime(0.22, t);
+    gain.gain.linearRampToValueAtTime(0, t + 0.42);
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start();
+    osc.stop(t + 0.42);
+  }
+
   playBump() {
     if (!this.ctx || this.isMuted) return;
     const osc = this.ctx.createOscillator();
@@ -259,7 +276,8 @@ class SoundController {
     this.stopBGM();
     this.isPlaying = true;
     this.currentBgm = levelType;
-    const track = AUDIO_TRACKS[levelType] || AUDIO_TRACKS[1];
+    const trackNumber = Number.isInteger(levelType) && levelType > 0 ? ((levelType - 1) % 3) + 1 : 1;
+    const track = AUDIO_TRACKS[trackNumber];
     this.tempo = track.tempo;
     this.song = track.notes;
 

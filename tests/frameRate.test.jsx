@@ -21,7 +21,7 @@ describe('game simulation speed', () => {
   });
 
   function runForFrames(refreshRate, frameCount, {
-    jump = false, nextLevelFrames = 0, thirdLevelFrames = 0, onRunComplete = null,
+    jump = false, laterLevelFrames = [], onRunComplete = null,
   } = {}) {
     const frames = new Map();
     let nextId = 0;
@@ -53,13 +53,11 @@ describe('game simulation speed', () => {
       }
     });
     advance(1, frameCount);
-    if (nextLevelFrames) {
+    let elapsedFrames = frameCount;
+    for (const levelFrames of laterLevelFrames) {
       fireEvent.click(screen.getByRole('button', { name: /next sector/i }));
-      advance(frameCount + 1, frameCount + nextLevelFrames);
-    }
-    if (thirdLevelFrames) {
-      fireEvent.click(screen.getByRole('button', { name: /next sector/i }));
-      advance(frameCount + nextLevelFrames + 1, frameCount + nextLevelFrames + thirdLevelFrames);
+      advance(elapsedFrames + 1, elapsedFrames + levelFrames);
+      elapsedFrames += levelFrames;
     }
     fireEvent.keyUp(window, { code: 'ArrowRight' });
     if (jump) fireEvent.keyUp(window, { code: 'Space' });
@@ -69,6 +67,7 @@ describe('game simulation speed', () => {
       lives: screen.getByText('LIVES').parentElement.textContent,
       clear: Boolean(screen.queryByText('COURSE CLEAR!')),
       sector3: Boolean(screen.queryByText('GET READY FOR SECTOR 3-1')),
+      sector4: Boolean(screen.queryByText('GET READY FOR SECTOR 4-1')),
       allClear: Boolean(screen.queryByText('ALL SECTORS CLEARED!')),
       gameOver: Boolean(screen.queryByText('GAME OVER')),
       score: Number(screen.getByText('NOVA').parentElement.textContent.replace('NOVA', '')),
@@ -94,20 +93,25 @@ describe('game simulation speed', () => {
   });
 
   it('can reach the second course beacon with normal controls', () => {
-    const run = runForFrames(60, 900, { jump: true, nextLevelFrames: 1100 });
+    const run = runForFrames(60, 900, { jump: true, laterLevelFrames: [1100] });
     expect(run.sector3, JSON.stringify(run)).toBe(true);
   });
 
-  it('can complete the third course with normal controls', () => {
+  it('can advance through the third course with normal controls', () => {
+    const run = runForFrames(60, 900, { jump: true, laterLevelFrames: [1100, 1500] });
+    expect(run.sector4, JSON.stringify(run)).toBe(true);
+  });
+
+  it('can finish all seven courses with normal controls and replay the same score', () => {
     const onRunComplete = vi.fn();
     const run = runForFrames(60, 900, {
-      jump: true, nextLevelFrames: 1100, thirdLevelFrames: 1500, onRunComplete,
+      jump: true, laterLevelFrames: [1100, 1500, 1000, 1100, 1800, 1300], onRunComplete,
     });
     expect(run.allClear, JSON.stringify(run)).toBe(true);
     expect(onRunComplete).toHaveBeenCalledTimes(1);
     const completion = onRunComplete.mock.calls[0][0];
     expect(completion).toMatchObject({ score: run.score, submissionCandidate: true });
     expect(completion.transcript).toMatchObject({ mode: 'campaign', endedAs: 'win' });
-    expect(replayCampaign(completion.transcript)).toMatchObject({ outcome: 'win', score: run.score, level: 3 });
+    expect(replayCampaign(completion.transcript)).toMatchObject({ outcome: 'win', score: run.score, level: 7 });
   });
 });

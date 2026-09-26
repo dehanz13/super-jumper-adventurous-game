@@ -45,6 +45,7 @@ describe('game audio', () => {
     soundController.playStomp();
     soundController.playFireball();
     soundController.playPowerUp();
+    soundController.playLife();
     soundController.playBump();
     soundController.playKick();
     soundController.playDamage();
@@ -71,6 +72,10 @@ describe('game audio', () => {
       vi.advanceTimersByTime(300);
     }
     expect(new Set(openings).size).toBe(3);
+    for (const [level, expected] of [[4, openings[0]], [5, openings[1]], [6, openings[2]], [7, openings[0]]]) {
+      soundController.playBGM(level);
+      expect(soundController.song[0].f).toBe(expected);
+    }
 
     soundController.playStageClear();
     expect(soundController.isPlaying).toBe(false);
