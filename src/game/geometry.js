@@ -6,7 +6,7 @@ export function rectanglesOverlap(a, b) {
 }
 
 export function playerSpriteBounds(player) {
-  const pixelSize = player.powerUp === 'small' ? 2 : 2.5;
+  const pixelSize = player.powerUp === 'small' ? 2.7 : 3;
   const size = SPRITE_CELLS * pixelSize;
 
   return {

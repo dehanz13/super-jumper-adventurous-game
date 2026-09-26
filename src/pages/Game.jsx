@@ -238,7 +238,7 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
 
     player.fireballs.forEach(fb => drawFireball(ctx, fb, world.offset));
     if (world.flag) drawBeacon(ctx, world.flag, world.offset);
-    drawExplorer(ctx, player, world.offset);
+    drawExplorer(ctx, player, world.offset, timestamp);
 
     gameLoopRef.current = requestAnimationFrame(gameLoop);
   }, [gameState, level, selectedTool, showGrid, onRunComplete, ranked.complete]);
@@ -588,7 +588,7 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
           {gameState === 'leaderboard' && boardClient && <SoloBoardScreen getBoard={boardClient} onBack={() => setGameState(boardReturnState)} rankedStatus={ranked.rankState?.status} />}
         </div>
         {/* Mobile Controls */}
-        <div className="touch-controls mt-4 justify-between items-center gap-2 sm:px-4" style={{fontFamily:'monospace'}}>
+        <div className="touch-controls mt-7 justify-between items-center gap-2 sm:px-4" style={{fontFamily:'monospace'}}>
           <div
             className="relative w-32 h-32"
             onPointerDown={handlePadPointerDown}
@@ -600,9 +600,9 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
             {[['ArrowUp','top-0 left-1/2 -translate-x-1/2','↑'],['ArrowDown','bottom-0 left-1/2 -translate-x-1/2','↓'],['ArrowLeft','left-0 top-1/2 -translate-y-1/2','←'],['ArrowRight','right-0 top-1/2 -translate-y-1/2','→']].map(([key,pos,glyph])=>(<button key={key} aria-label={key.replace('Arrow', 'Move ')} className={`absolute ${pos} w-10 h-10 bg-[#303030] active:bg-[#505050] border-2 border-black rounded-sm text-white text-xl font-bold`}>{glyph}</button>))}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-[#303030] border-2 border-black rounded-sm"/>
           </div>
-          <div className="flex gap-4 items-center">
+          <div className="flex gap-5 items-center">
             <button aria-label="Jump A" className="w-14 h-14 rounded-full bg-[#A00000] active:bg-[#E52521] border-4 border-[#600000] text-white font-bold text-xl shadow-lg" onPointerDown={handleJumpPointerDown} onPointerUp={handleJumpPointerEnd} onPointerCancel={handleJumpPointerEnd} onLostPointerCapture={handleJumpPointerEnd}>A</button>
-            <button aria-label="Jump B" className="w-14 h-14 rounded-full bg-[#A00000] active:bg-[#E52521] border-4 border-[#600000] text-white font-bold text-xl shadow-lg -mt-4" onPointerDown={handleJumpPointerDown} onPointerUp={handleJumpPointerEnd} onPointerCancel={handleJumpPointerEnd} onLostPointerCapture={handleJumpPointerEnd}>B</button>
+            <button aria-label="Jump B" className="w-14 h-14 rounded-full bg-[#A00000] active:bg-[#E52521] border-4 border-[#600000] text-white font-bold text-xl shadow-lg -mt-2" onPointerDown={handleJumpPointerDown} onPointerUp={handleJumpPointerEnd} onPointerCancel={handleJumpPointerEnd} onLostPointerCapture={handleJumpPointerEnd}>B</button>
           </div>
         </div>
       </div>
