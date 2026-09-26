@@ -28,4 +28,4 @@ The current simulation moves horizontally at 5 pixels per step. A jump starts at
 - Fixed-step tests remain valid at 30, 60, and 120 Hz; the maps do not change physics constants to force a route.
 - Visual checks compare drawn sprites and terrain with their contact areas on desktop and mobile.
 - Each level gets a real loop route check and a browser completion check before its design is called finished.
-- Score values and leaderboard submission remain outside this map pass because scoring rules are still being defined.
+- Score values are versioned separately from level maps; leaderboard deployment remains outside this map pass.
