@@ -61,8 +61,11 @@ paths:
         The server validates the bounded transcript, pinned versions, elapsed
         time, and single-use run state, then replays all steps. A matching
         retry returns the same run result; a different payload for a finished
-        run is a conflict. A browser-supplied score is diagnostic and never
-        forwarded to the leaderboard. Only a verified win is eligible.
+        run is a conflict. An invalid completed-campaign claim receives the
+        same rejection on retry. A browser-supplied score is diagnostic and
+        never forwarded to the leaderboard. Only a verified win is eligible.
+        The verified run result and pending leaderboard write must be committed
+        in one durable transaction. The request body is capped at 256 KiB.
       parameters:
         - $ref: '#/components/parameters/RunId'
       security:
@@ -89,6 +92,8 @@ paths:
         '422':
           $ref: '#/components/responses/Problem'
         '429':
+          $ref: '#/components/responses/Problem'
+        '503':
           $ref: '#/components/responses/Problem'
   /runs/{runId}:
     get:
@@ -119,7 +124,10 @@ components:
     RunToken:
       type: http
       scheme: bearer
-      description: Opaque per-run secret issued by startRun; never stored in plaintext.
+      description: >-
+        Opaque per-run secret issued by startRun. Supply it in Authorization,
+        never in a URL. Only its SHA-256 hash is stored. A malformed, unknown,
+        or mismatched secret is rejected before replay.
   parameters:
     RunId:
       name: runId
