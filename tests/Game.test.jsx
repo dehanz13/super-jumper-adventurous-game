@@ -1,7 +1,8 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Game from '../src/pages/Game';
 import { soundController } from '../src/components/SoundController';
+import { currentRunVersions } from '../src/game/rankedRunVerifier';
 
 vi.mock('../src/components/SoundController', () => ({
   soundController: {
@@ -100,6 +101,33 @@ describe('game entry and first frame', () => {
     stepFrames(1);
     fireEvent.keyUp(window, { code: 'ArrowRight' });
     expect(frames.size).toBeGreaterThan(0);
+  });
+
+  it('starts ranked play only after the guest run service issues a matching run', async () => {
+    const runClient = { start: vi.fn(async () => ({
+      runId: '123e4567-e89b-42d3-a456-426614174000', runToken: 'a'.repeat(43),
+      versions: currentRunVersions(),
+    })) };
+    render(<Game runClient={runClient} />);
+    fireEvent.click(screen.getByText(/skip/i));
+    expect(screen.getByRole('button', { name: /press start/i })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Public name'), { target: { value: 'Nova' } });
+    fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'US' } });
+    fireEvent.click(screen.getByRole('button', { name: /press start/i }));
+    await waitFor(() => expect(runClient.start).toHaveBeenCalledWith({ guestProfile: { displayName: 'Nova', country: 'US' } }));
+    await waitFor(() => expect(screen.getByRole('button', { name: /pause game/i })).toBeInTheDocument());
+  });
+
+  it('keeps local play available when the ranking service cannot start', async () => {
+    const runClient = { start: vi.fn(async () => { throw new Error('offline'); }) };
+    render(<Game runClient={runClient} />);
+    fireEvent.click(screen.getByText(/skip/i));
+    fireEvent.change(screen.getByLabelText('Public name'), { target: { value: 'Nova' } });
+    fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'US' } });
+    fireEvent.click(screen.getByRole('button', { name: /press start/i }));
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Ranking is unavailable'));
+    fireEvent.click(screen.getByRole('button', { name: /play locally/i }));
+    expect(screen.getByRole('button', { name: /pause game/i })).toBeInTheDocument();
   });
 
   it('stops background music when the embedded game unmounts', () => {
