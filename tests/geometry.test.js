@@ -3,9 +3,9 @@ import { alignGroundEnemy, beaconFinishBounds, createEditorCreature, creatureHur
 
 describe('player sprite bounds', () => {
   it.each([
-    ['small', 50, 26],
-    ['big', 65, 32.5],
-    ['plasma', 65, 32.5],
+    ['small', 50, 35.1],
+    ['big', 65, 39],
+    ['plasma', 65, 39],
   ])('centers and grounds the %s sprite', (powerUp, height, size) => {
     const player = { x: 100, y: 200, width: 40, height, powerUp };
     const bounds = playerSpriteBounds(player);
@@ -44,13 +44,16 @@ describe('visible contact geometry', () => {
   it('keeps walking contact clear until the explorer and pebblit silhouettes meet', () => {
     const player = { x: 100, y: 450, width: 40, height: 50, powerUp: 'small' };
     const body = playerHurtbox(player);
-    const separate = creatureHurtbox({ type: 'pebblit', x: 128, y: 460, width: 40, height: 40 });
-    const touching = creatureHurtbox({ type: 'pebblit', x: 127, y: 460, width: 40, height: 40 });
+    const separate = creatureHurtbox({ type: 'pebblit', x: 132, y: 460, width: 40, height: 40 });
+    const touching = creatureHurtbox({ type: 'pebblit', x: 131, y: 460, width: 40, height: 40 });
 
-    expect(body).toEqual({ x: 109, y: 478, width: 22, height: 22 });
+    expect(body.x).toBeCloseTo(105.15);
+    expect(body.y).toBeCloseTo(470.3);
+    expect(body.width).toBeCloseTo(29.7);
+    expect(body.height).toBeCloseTo(29.7);
     expect(body.x + body.width).toBeLessThanOrEqual(separate.x);
     expect(body.x + body.width).toBeGreaterThan(touching.x);
-    expect(body.y + body.height).toBe(500);
+    expect(body.y + body.height).toBeCloseTo(500);
   });
 
   it('follows the visible creature shapes and their current state', () => {

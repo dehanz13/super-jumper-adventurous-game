@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { App, assertions } from 'aws-cdk-lib';
 import { RunServiceStack } from '../infra/run-service-stack.js';
 
@@ -11,8 +11,10 @@ function template() {
 }
 
 describe('run service infrastructure', () => {
+  let cfn: assertions.Template;
+  beforeAll(() => { cfn = template(); }, 15_000);
+
   it('retains a protected TTL table with the exact due-outbox index', () => {
-    const cfn = template();
     cfn.hasResourceProperties('AWS::DynamoDB::GlobalTable', {
       BillingMode: 'PAY_PER_REQUEST',
       KeySchema: [{ AttributeName: 'pk', KeyType: 'HASH' }],
@@ -35,7 +37,6 @@ describe('run service infrastructure', () => {
   });
 
   it('limits API access and schedules one worker each minute', () => {
-    const cfn = template();
     cfn.resourceCountIs('AWS::Lambda::Function', 2);
     cfn.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
       StageName: '$default', AutoDeploy: true,
@@ -60,10 +61,10 @@ describe('run service infrastructure', () => {
   });
 
   it('requires an existing secret ARN without embedding the key', () => {
-    const cfn = template().toJSON();
-    expect(cfn.Parameters.LeaderboardKeySecretArn.NoEcho).toBe(true);
-    expect(JSON.stringify(cfn)).not.toContain('X-Api-Key');
-    const policies = JSON.stringify(Object.values(cfn.Resources).filter((resource: any) => resource.Type === 'AWS::IAM::Policy'));
+    const resources = cfn.toJSON();
+    expect(resources.Parameters.LeaderboardKeySecretArn.NoEcho).toBe(true);
+    expect(JSON.stringify(resources)).not.toContain('X-Api-Key');
+    const policies = JSON.stringify(Object.values(resources.Resources).filter((resource: any) => resource.Type === 'AWS::IAM::Policy'));
     expect(policies).toContain('secretsmanager:GetSecretValue');
     expect(policies).toContain('dynamodb:Query');
     expect(policies).toContain('due-outbox');

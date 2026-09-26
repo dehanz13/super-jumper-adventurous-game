@@ -23,8 +23,8 @@ function ellipse(ctx, color, x, y, radiusX, radiusY) {
   ctx.fill();
 }
 
-export function drawExplorer(ctx, player, offset) {
-  if (player.isInvincible && !player.starTimer && Math.floor(Date.now() / 100) % 2 === 0) return;
+export function drawExplorer(ctx, player, offset, animationTime = Date.now()) {
+  if (player.isInvincible && !player.starTimer && Math.floor(animationTime / 100) % 2 === 0) return;
 
   const sprite = playerSpriteBounds(player);
   const unit = sprite.pixelSize;
@@ -32,43 +32,57 @@ export function drawExplorer(ctx, player, offset) {
   const x = sprite.x - offset;
   const y = sprite.y;
   const running = player.onGround && Math.abs(player.velocityX) > 0.5;
-  const step = Math.floor(Date.now() / 100) % 2;
+  const step = Math.floor(animationTime / 110) % 2;
+  const blink = Math.floor(animationTime / 1800) % 5 === 4;
+  const pulse = Math.floor(animationTime / 320) % 2 === 0;
   const suit = player.powerUp === 'plasma' ? COLORS.ember : COLORS.suit;
   const trim = player.starTimer > 0
-    ? [COLORS.trim, COLORS.visor, COLORS.ember][Math.floor(Date.now() / 80) % 3]
+    ? [COLORS.trim, COLORS.visor, COLORS.ember][Math.floor(animationTime / 80) % 3]
     : COLORS.trim;
-  const pixel = (color, gridX, gridY, width = 1, height = 1) =>
-    rectangle(ctx, color, gridX * unit, gridY * unit, width * unit, height * unit);
+  const pixel = (color, gridX, gridY, width = 1, height = 1) => {
+    const left = Math.round(gridX * unit);
+    const top = Math.round(gridY * unit);
+    rectangle(ctx, color, left, top,
+      Math.round((gridX + width) * unit) - left,
+      Math.round((gridY + height) * unit) - top);
+  };
 
   ctx.save();
-  ctx.translate(x, y);
+  ctx.translate(Math.round(x), Math.round(y));
   if (!player.facingRight) {
     ctx.translate(size, 0);
     ctx.scale(-1, 1);
   }
   ctx.imageSmoothingEnabled = false;
 
-  // A single antenna and broad glass visor keep the explorer distinct at phone size.
-  pixel(COLORS.visor, 6, 0);
+  // Antenna, helmet shine, and visor read clearly even when the canvas shrinks on a phone.
+  pixel(pulse ? COLORS.visor : COLORS.trim, 6, 0);
   pixel(COLORS.outline, 6, 1);
+  pixel(COLORS.boot, 2, 7, 2, 3); // oxygen pack, behind the arm
   pixel(COLORS.outline, 3, 2, 7, 5);
   pixel(COLORS.ice, 4, 3, 5, 3);
+  pixel(COLORS.visor, 4, 3, 2);
   pixel(trim, 4, 4, 5);
-  pixel(COLORS.outline, 5, 4);
+  pixel(COLORS.outline, 5, 4, blink ? 3 : 1);
+  if (!blink) pixel(COLORS.outline, 7, 4);
+  pixel(COLORS.ice, 8, 3);
   pixel(COLORS.outline, 2, 4, 1, 2);
   pixel(COLORS.outline, 10, 4, 1, 2);
   pixel(COLORS.visor, 3, 6, 7);
 
   pixel(COLORS.outline, 3, 7, 7, 4);
   pixel(suit, 4, 7, 5, 4);
-  pixel(trim, 6, 8, 2, 2);
+  pixel(pulse ? trim : COLORS.ice, 6, 8, 2, 2);
+  pixel(COLORS.outline, 6, 8, 2, 1);
   pixel(COLORS.outline, 1, 8, 2, 3);
   pixel(suit, 2, 8, 1, 2);
   pixel(COLORS.outline, 10, 8, 2, 3);
   pixel(suit, 10, 8, 1, 2);
+  pixel(COLORS.ice, 1, running && step ? 10 : 9);
+  pixel(COLORS.ice, 11, running && !step ? 10 : 9);
 
   const leftFoot = !player.onGround ? 10 : running && step ? 11 : 12;
-  const rightFoot = !player.onGround ? 11 : running && step ? 12 : 12;
+  const rightFoot = !player.onGround ? 11 : running && !step ? 11 : 12;
   pixel(COLORS.outline, 4, 11, 2, 2);
   pixel(COLORS.outline, 7, 11, 2, 2);
   pixel(COLORS.boot, 2, leftFoot, 4);
