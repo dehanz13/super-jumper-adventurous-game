@@ -39,8 +39,11 @@ describe('run service contract', () => {
       { required: ['guestCredential'] },
     ]);
     expect(contract.paths['/runs'].post.responses['401']).toBeDefined();
+    expect(contract.paths['/runs'].post.responses['501']).toBeDefined();
+    expect(contract.paths['/runs'].post.responses['415']).toBeDefined();
     expect(contract.paths['/runs/{runId}/finish'].post.security).toEqual([{ RunToken: [] }]);
     expect(contract.paths['/runs/{runId}/finish'].post.responses['503']).toBeDefined();
+    expect(contract.paths['/runs/{runId}/finish'].post.responses['413']).toBeDefined();
     expect(contract.paths['/runs/{runId}/finish'].post.description).toContain('one durable transaction');
     expect(contract.components.schemas.RunResult.properties.status.enum).toContain('delivery_failed');
     const guestInput = StartRunRequest.properties.guestCredential;
