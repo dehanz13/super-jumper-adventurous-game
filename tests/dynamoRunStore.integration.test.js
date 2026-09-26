@@ -11,6 +11,7 @@ import { startGuestRun } from '../src/server/guestIdentity';
 import { issueRun } from '../src/server/issueRun';
 import { LeaderboardSubmissionError } from '../src/server/leaderboardSubmission';
 import { DELIVERY_WINDOW_MS, processOutboxBatch } from '../src/server/outboxWorker';
+import { createRunApiHandler } from '../src/server/runApiHandler';
 
 const endpoint = process.env.DYNAMODB_LOCAL_ENDPOINT;
 if (process.env.REQUIRE_DYNAMO_LOCAL === '1' && !endpoint) {
@@ -242,5 +243,31 @@ describe.runIf(Boolean(endpoint))('DynamoDB Local run store', () => {
     })).toBe(false);
     expect(await store.markDelivered({ runId: start.runId, claimToken: first.claimToken, ranks: [] })).toBe(false);
     expect(await store.markDelivered({ runId: start.runId, claimToken: second.claimToken, ranks: [{ board: 'weekly', rank: 3 }] })).toBe(true);
+  });
+
+  it('serves a guest start and verified finish through the HTTP boundary', async () => {
+    let clock = startMs;
+    const handler = createRunApiHandler({
+      store, gameId: 'nova-orbit-jump', allowedOrigins: ['https://games.hearso.com'], now: () => clock,
+    });
+    const event = (method, rawPath, body, token) => ({
+      requestContext: { http: { method } }, rawPath,
+      headers: {
+        origin: 'https://games.hearso.com',
+        ...(body && { 'content-type': 'application/json' }),
+        ...(token && { authorization: `Bearer ${token}` }),
+      },
+      ...(body && { body: JSON.stringify(body) }),
+    });
+    const started = await handler(event('POST', '/v1/runs', { guestProfile: { displayName: 'Aster', country: 'CA' } }));
+    expect(started.statusCode).toBe(201);
+    const run = JSON.parse(started.body);
+    clock = nowMs;
+    const finished = await handler(event('POST', `/v1/runs/${run.runId}/finish`, { transcript, claimedScore: score }, run.runToken));
+    expect(finished.statusCode).toBe(202);
+    expect(JSON.parse(finished.body)).toEqual({ runId: run.runId, status: 'pending_write', score });
+    const stored = await store.getRun(run.runId);
+    expect(stored.status).toBe('pending_write');
+    expect(await store.getOutbox(run.runId)).toMatchObject({ outboxStatus: 'pending' });
   });
 });

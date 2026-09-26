@@ -51,7 +51,21 @@ paths:
           $ref: '#/components/responses/Problem'
         '401':
           $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '413':
+          $ref: '#/components/responses/Problem'
+        '415':
+          $ref: '#/components/responses/Problem'
         '429':
+          $ref: '#/components/responses/Problem'
+        '501':
+          description: Signed Hearso account handoff is not available in this release.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
           $ref: '#/components/responses/Problem'
   /runs/{runId}/finish:
     post:
@@ -93,7 +107,13 @@ paths:
           $ref: '#/components/responses/Problem'
         '401':
           $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
         '409':
+          $ref: '#/components/responses/Problem'
+        '413':
+          $ref: '#/components/responses/Problem'
+        '415':
           $ref: '#/components/responses/Problem'
         '422':
           $ref: '#/components/responses/Problem'
@@ -121,9 +141,13 @@ paths:
                 $ref: '#/components/schemas/RunResult'
         '401':
           $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
         '404':
           $ref: '#/components/responses/Problem'
         '429':
+          $ref: '#/components/responses/Problem'
+        '503':
           $ref: '#/components/responses/Problem'
 components:
   securitySchemes:
