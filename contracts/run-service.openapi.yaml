@@ -77,6 +77,12 @@ paths:
             schema:
               $ref: '#/components/schemas/FinishRunRequest'
       responses:
+        '200':
+          description: A matching retry returned a previously ranked or delivery-failed result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunResult'
         '202':
           description: The verified result is queued for a durable leaderboard write.
           content:
@@ -286,7 +292,7 @@ components:
           format: uuid
         status:
           type: string
-          enum: [active, verifying, rejected, pending_write, ranked]
+          enum: [active, verifying, rejected, pending_write, ranked, delivery_failed]
         score:
           type: integer
           minimum: 0
@@ -294,6 +300,9 @@ components:
         rejectionCode:
           type: string
           description: Stable code shown only for rejected runs.
+        failureCode:
+          type: string
+          description: Stable delivery code shown only when a verified score could not reach the leaderboard.
         ranks:
           type: array
           description: Present only after successful leaderboard writes; guests never receive alltime.

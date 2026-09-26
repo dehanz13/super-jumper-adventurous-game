@@ -1,6 +1,10 @@
-import { GetCommand, PutCommand, TransactWriteCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { randomUUID } from 'node:crypto';
+import { GetCommand, PutCommand, QueryCommand, TransactWriteCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 
 const TABLE_NAME = /^[A-Za-z0-9_.-]{3,255}$/;
+const OUTBOX_INDEX = 'due-outbox';
+const LEASE_MS = 2 * 60 * 1000;
+const DELIVERED_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 
 function runKey(runId) { return { pk: `RUN#${runId}` }; }
 function guestKey(tokenHash) { return { pk: `GUEST#${tokenHash}` }; }
@@ -21,6 +25,13 @@ export function createDynamoRunStore({ documentClient, tableName }) {
   async function getGuestIdentityByTokenHash(tokenHash) {
     const response = await documentClient.send(new GetCommand({
       TableName: tableName, Key: guestKey(tokenHash), ConsistentRead: true,
+    }));
+    return response.Item;
+  }
+
+  async function getOutbox(runId) {
+    const response = await documentClient.send(new GetCommand({
+      TableName: tableName, Key: outboxKey(runId), ConsistentRead: true,
     }));
     return response.Item;
   }
@@ -99,12 +110,138 @@ export function createDynamoRunStore({ documentClient, tableName }) {
     }
   }
 
+  async function listDueOutbox({ nowMs, limit }) {
+    const results = await Promise.all(['pending', 'processing'].map(async status => {
+      const response = await documentClient.send(new QueryCommand({
+        TableName: tableName, IndexName: OUTBOX_INDEX,
+        KeyConditionExpression: '#status = :status AND nextAttemptAtMs <= :now',
+        ExpressionAttributeNames: { '#status': 'outboxStatus' },
+        ExpressionAttributeValues: { ':status': status, ':now': nowMs },
+        Limit: limit,
+      }));
+      return response.Items ?? [];
+    }));
+    return results.flat().sort((a, b) => a.nextAttemptAtMs - b.nextAttemptAtMs).slice(0, limit);
+  }
+
+  async function claimOutbox({ runId, nowMs }) {
+    const claimToken = randomUUID();
+    try {
+      const response = await documentClient.send(new UpdateCommand({
+        TableName: tableName, Key: outboxKey(runId),
+        UpdateExpression: 'SET outboxStatus = :processing, claimToken = :token, nextAttemptAtMs = :lease ADD attemptCount :one',
+        ConditionExpression: '(outboxStatus = :pending OR outboxStatus = :processing) AND nextAttemptAtMs <= :now',
+        ExpressionAttributeValues: {
+          ':pending': 'pending', ':processing': 'processing', ':token': claimToken,
+          ':lease': nowMs + LEASE_MS, ':now': nowMs, ':one': 1,
+        },
+        ReturnValues: 'ALL_NEW',
+      }));
+      return response.Attributes;
+    } catch (error) {
+      if (error?.name === 'ConditionalCheckFailedException') return null;
+      throw error;
+    }
+  }
+
+  async function rescheduleOutbox({ runId, claimToken, nextAttemptAtMs, failureCode }) {
+    try {
+      await documentClient.send(new UpdateCommand({
+        TableName: tableName, Key: outboxKey(runId),
+        UpdateExpression: 'SET outboxStatus = :pending, nextAttemptAtMs = :next, lastFailureCode = :failure REMOVE claimToken',
+        ConditionExpression: 'outboxStatus = :processing AND claimToken = :token',
+        ExpressionAttributeValues: {
+          ':pending': 'pending', ':processing': 'processing', ':token': claimToken,
+          ':next': nextAttemptAtMs, ':failure': failureCode,
+        },
+      }));
+      return true;
+    } catch (error) {
+      if (error?.name === 'ConditionalCheckFailedException') return false;
+      throw error;
+    }
+  }
+
+  async function markDelivered({ runId, claimToken, ranks, nowMs = Date.now() }) {
+    try {
+      await documentClient.send(new TransactWriteCommand({
+        TransactItems: [
+          { Update: {
+            TableName: tableName, Key: outboxKey(runId),
+            UpdateExpression: 'SET outboxStatus = :delivered, deliveredAtMs = :now, #ttl = :ttl REMOVE claimToken',
+            ConditionExpression: 'outboxStatus = :processing AND claimToken = :token',
+            ExpressionAttributeNames: { '#ttl': 'ttl' },
+            ExpressionAttributeValues: {
+              ':delivered': 'delivered', ':processing': 'processing', ':token': claimToken,
+              ':now': nowMs, ':ttl': Math.ceil((nowMs + DELIVERED_RETENTION_MS) / 1000),
+            },
+          } },
+          { Update: {
+            TableName: tableName, Key: runKey(runId),
+            UpdateExpression: 'SET #status = :ranked, ranks = :ranks',
+            ConditionExpression: '#status = :pending',
+            ExpressionAttributeNames: { '#status': 'status' },
+            ExpressionAttributeValues: { ':pending': 'pending_write', ':ranked': 'ranked', ':ranks': ranks },
+          } },
+        ],
+      }));
+      return true;
+    } catch (error) {
+      if (error?.name === 'TransactionCanceledException') {
+        const item = await getOutbox(runId);
+        if (item?.claimToken !== claimToken) return false;
+      }
+      throw error;
+    }
+  }
+
+  async function quarantineOutbox({ runId, claimToken, failureCode, nowMs = Date.now() }) {
+    try {
+      await documentClient.send(new TransactWriteCommand({
+        TransactItems: [
+          { Update: {
+            TableName: tableName, Key: outboxKey(runId),
+            UpdateExpression: 'SET outboxStatus = :quarantined, failureCode = :failure, #ttl = :ttl REMOVE claimToken',
+            ConditionExpression: 'outboxStatus = :processing AND claimToken = :token',
+            ExpressionAttributeNames: { '#ttl': 'ttl' },
+            ExpressionAttributeValues: {
+              ':quarantined': 'quarantined', ':processing': 'processing', ':token': claimToken,
+              ':failure': failureCode, ':ttl': Math.ceil((nowMs + DELIVERED_RETENTION_MS) / 1000),
+            },
+          } },
+          { Update: {
+            TableName: tableName, Key: runKey(runId),
+            UpdateExpression: 'SET #status = :failed, failureCode = :failure',
+            ConditionExpression: '#status = :pending',
+            ExpressionAttributeNames: { '#status': 'status' },
+            ExpressionAttributeValues: {
+              ':pending': 'pending_write', ':failed': 'delivery_failed', ':failure': failureCode,
+            },
+          } },
+        ],
+      }));
+      return true;
+    } catch (error) {
+      if (error?.name === 'TransactionCanceledException') {
+        const item = await getOutbox(runId);
+        if (item?.claimToken !== claimToken) return false;
+      }
+      throw error;
+    }
+  }
+
   return {
     getRun,
+    getOutbox,
     getGuestIdentityByTokenHash,
     saveGuestIdentity,
     saveActiveRun,
     rejectRun,
     commitVerifiedResultAndOutbox,
+    listDueOutbox,
+    claimOutbox,
+    rescheduleOutbox,
+    markDelivered,
+    quarantineOutbox,
   };
 }

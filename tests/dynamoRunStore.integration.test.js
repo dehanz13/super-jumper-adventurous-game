@@ -9,6 +9,8 @@ import { createDynamoRunStore } from '../src/server/dynamoRunStore';
 import { finishRun, RunFinishError } from '../src/server/finishRun';
 import { startGuestRun } from '../src/server/guestIdentity';
 import { issueRun } from '../src/server/issueRun';
+import { LeaderboardSubmissionError } from '../src/server/leaderboardSubmission';
+import { DELIVERY_WINDOW_MS, processOutboxBatch } from '../src/server/outboxWorker';
 
 const endpoint = process.env.DYNAMODB_LOCAL_ENDPOINT;
 if (process.env.REQUIRE_DYNAMO_LOCAL === '1' && !endpoint) {
@@ -56,8 +58,20 @@ describe.runIf(Boolean(endpoint))('DynamoDB Local run store', () => {
     await rawClient.send(new CreateTableCommand({
       TableName: tableName,
       BillingMode: 'PAY_PER_REQUEST',
-      AttributeDefinitions: [{ AttributeName: 'pk', AttributeType: 'S' }],
+      AttributeDefinitions: [
+        { AttributeName: 'pk', AttributeType: 'S' },
+        { AttributeName: 'outboxStatus', AttributeType: 'S' },
+        { AttributeName: 'nextAttemptAtMs', AttributeType: 'N' },
+      ],
       KeySchema: [{ AttributeName: 'pk', KeyType: 'HASH' }],
+      GlobalSecondaryIndexes: [{
+        IndexName: 'due-outbox',
+        KeySchema: [
+          { AttributeName: 'outboxStatus', KeyType: 'HASH' },
+          { AttributeName: 'nextAttemptAtMs', KeyType: 'RANGE' },
+        ],
+        Projection: { ProjectionType: 'ALL' },
+      }],
     }));
     store = createDynamoRunStore({ documentClient, tableName });
     ({ transcript, score } = completedCampaign());
@@ -161,5 +175,72 @@ describe.runIf(Boolean(endpoint))('DynamoDB Local run store', () => {
     const hash = createHash('sha256').update(start.guestCredential).digest('hex');
     await expect(store.saveGuestIdentity(await store.getGuestIdentityByTokenHash(hash)))
       .rejects.toMatchObject({ name: 'ConditionalCheckFailedException' });
+  });
+
+  it('claims, delivers, and ranks a due outbox item atomically', async () => {
+    const { start, args } = await newGuestRun();
+    await finishRun(args);
+    const due = await store.listDueOutbox({ nowMs, limit: 25 });
+    expect(due.some(item => item.runId === start.runId)).toBe(true);
+    const result = await processOutboxBatch({
+      ...store,
+      submitScore: async () => ({ boards: [{ period: 'weekly-2026-W39', rank: 7 }] }),
+      now: () => nowMs + 1000,
+    });
+    expect(result.delivered).toBeGreaterThanOrEqual(1);
+    expect(await store.getRun(start.runId)).toMatchObject({ status: 'ranked', ranks: [{ board: 'weekly', rank: 7 }] });
+    expect(await store.getOutbox(start.runId)).toMatchObject({ outboxStatus: 'delivered', attemptCount: 1 });
+    expect(await store.listDueOutbox({ nowMs: nowMs + 1000, limit: 25 })).not.toContainEqual(expect.objectContaining({ runId: start.runId }));
+  });
+
+  it('reschedules a throttle, then retries the same outbox item', async () => {
+    const { start, args } = await newGuestRun();
+    await finishRun(args);
+    const throttled = await processOutboxBatch({
+      ...store,
+      submitScore: async () => { throw new LeaderboardSubmissionError('http_error', 429); },
+      now: () => nowMs + 1000,
+    });
+    expect(throttled.retried).toBeGreaterThanOrEqual(1);
+    const pending = await store.getOutbox(start.runId);
+    expect(pending).toMatchObject({ outboxStatus: 'pending', attemptCount: 1, lastFailureCode: 'leaderboard_http_429' });
+    expect(pending.nextAttemptAtMs).toBe(nowMs + 6000);
+    await processOutboxBatch({
+      ...store,
+      submitScore: async () => ({ boards: [{ period: 'weekly-2026-W39', rank: 6 }] }),
+      now: () => nowMs + 6000,
+    });
+    expect((await store.getOutbox(start.runId)).attemptCount).toBe(2);
+    expect((await store.getRun(start.runId)).status).toBe('ranked');
+  });
+
+  it('quarantines scores past the delivery window and records a visible failure', async () => {
+    const { start, args } = await newGuestRun();
+    await finishRun(args);
+    await processOutboxBatch({
+      ...store, submitScore: async () => { throw new Error('must not submit'); },
+      now: () => nowMs + DELIVERY_WINDOW_MS,
+    });
+    expect(await store.getRun(start.runId)).toMatchObject({
+      status: 'delivery_failed', failureCode: 'delivery_window_expired',
+    });
+    expect(await store.getOutbox(start.runId)).toMatchObject({
+      outboxStatus: 'quarantined', failureCode: 'delivery_window_expired',
+    });
+  });
+
+  it('prevents a stale lease from changing a newer worker claim', async () => {
+    const { start, args } = await newGuestRun();
+    await finishRun(args);
+    const first = await store.claimOutbox({ runId: start.runId, nowMs });
+    expect(await store.claimOutbox({ runId: start.runId, nowMs: nowMs + 1000 })).toBeNull();
+    const second = await store.claimOutbox({ runId: start.runId, nowMs: nowMs + 2 * 60 * 1000 });
+    expect(second.claimToken).not.toBe(first.claimToken);
+    expect(await store.rescheduleOutbox({
+      runId: start.runId, claimToken: first.claimToken,
+      nextAttemptAtMs: nowMs + 3000, failureCode: 'stale',
+    })).toBe(false);
+    expect(await store.markDelivered({ runId: start.runId, claimToken: first.claimToken, ranks: [] })).toBe(false);
+    expect(await store.markDelivered({ runId: start.runId, claimToken: second.claimToken, ranks: [{ board: 'weekly', rank: 3 }] })).toBe(true);
   });
 });
