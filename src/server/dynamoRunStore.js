@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { GetCommand, PutCommand, QueryCommand, TransactWriteCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { createNovaVerifiedEvent } from './novaVerifiedEvent.js';
 
 const TABLE_NAME = /^[A-Za-z0-9_.-]{3,255}$/;
 const OUTBOX_INDEX = 'due-outbox';
@@ -9,6 +10,7 @@ const DELIVERED_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 function runKey(runId) { return { pk: `RUN#${runId}` }; }
 function guestKey(tokenHash) { return { pk: `GUEST#${tokenHash}` }; }
 function outboxKey(runId) { return { pk: `OUTBOX#${runId}` }; }
+function auditKey(runId) { return { pk: `AUDIT#${runId}` }; }
 
 // Accept a DynamoDBDocumentClient so the Lambda bootstrap can reuse one client.
 export function createDynamoRunStore({ documentClient, tableName }) {
@@ -32,6 +34,13 @@ export function createDynamoRunStore({ documentClient, tableName }) {
   async function getOutbox(runId) {
     const response = await documentClient.send(new GetCommand({
       TableName: tableName, Key: outboxKey(runId), ConsistentRead: true,
+    }));
+    return response.Item;
+  }
+
+  async function getVerifiedAudit(runId) {
+    const response = await documentClient.send(new GetCommand({
+      TableName: tableName, Key: auditKey(runId), ConsistentRead: true,
     }));
     return response.Item;
   }
@@ -75,6 +84,9 @@ export function createDynamoRunStore({ documentClient, tableName }) {
   async function commitVerifiedResultAndOutbox({ runId, expectedStatus, requestDigest, result, outbox }) {
     const nextAttemptAtMs = Date.parse(result.achievedAt);
     if (!Number.isSafeInteger(nextAttemptAtMs)) throw new TypeError('valid achievement time is required');
+    const run = await getRun(runId);
+    if (!run || run.status !== expectedStatus) return false;
+    const event = createNovaVerifiedEvent({ run, submission: outbox });
     try {
       await documentClient.send(new TransactWriteCommand({
         TransactItems: [
@@ -95,6 +107,18 @@ export function createDynamoRunStore({ documentClient, tableName }) {
               ...outboxKey(runId), kind: 'outbox', runId,
               outboxStatus: 'pending', nextAttemptAtMs, attemptCount: 0,
               submission: outbox,
+            },
+            ConditionExpression: 'attribute_not_exists(pk)',
+          } },
+          { Put: {
+            TableName: tableName,
+            Item: {
+              ...auditKey(runId), kind: 'verified_audit', runId,
+              outboxStatus: 'audit_pending', nextAttemptAtMs, attemptCount: 0,
+              // Private projection key. It is deliberately absent from the
+              // Kafka event and must follow Hearso account deletion policy.
+              playerId: run.playerId,
+              event,
             },
             ConditionExpression: 'attribute_not_exists(pk)',
           } },
@@ -233,6 +257,7 @@ export function createDynamoRunStore({ documentClient, tableName }) {
   return {
     getRun,
     getOutbox,
+    getVerifiedAudit,
     getGuestIdentityByTokenHash,
     saveGuestIdentity,
     saveActiveRun,

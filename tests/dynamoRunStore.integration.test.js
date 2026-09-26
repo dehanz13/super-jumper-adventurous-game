@@ -116,6 +116,16 @@ describe.runIf(Boolean(endpoint))('DynamoDB Local run store', () => {
       outboxStatus: 'pending', attemptCount: 0,
       submission: { matchId: start.runId, playerId: storedRun.playerId, boards: ['weekly'], score },
     });
+    expect(await store.getVerifiedAudit(start.runId)).toMatchObject({
+      kind: 'verified_audit', outboxStatus: 'audit_pending', attemptCount: 0,
+      playerId: storedRun.playerId,
+      event: {
+        eventId: start.runId, eventType: 'nova.run.verified', eventVersion: 1,
+        gameId: 'nova-orbit-jump', playerClass: 'guest', score, boards: ['weekly'],
+      },
+    });
+    expect(await store.getVerifiedAudit(start.runId)).not.toHaveProperty('ttl');
+    expect(JSON.stringify((await store.getVerifiedAudit(start.runId)).event)).not.toContain(storedRun.playerId);
     expect(await finishRun(args)).toEqual(first);
     await expect(finishRun({ ...args, payload: { transcript } }))
       .rejects.toThrowError(new RunFinishError('finish_conflict', 409));
@@ -139,6 +149,7 @@ describe.runIf(Boolean(endpoint))('DynamoDB Local run store', () => {
     expect((await documentClient.send(new GetCommand({
       TableName: tableName, Key: { pk: `OUTBOX#${start.runId}` }, ConsistentRead: true,
     }))).Item.submission.matchId).toBe(start.runId);
+    expect((await store.getVerifiedAudit(start.runId)).event.eventId).toBe(start.runId);
   });
 
   it('keeps the run active when an existing outbox key cancels the transaction', async () => {
@@ -148,6 +159,17 @@ describe.runIf(Boolean(endpoint))('DynamoDB Local run store', () => {
     }));
     await expect(finishRun(args)).rejects.toMatchObject({ name: 'TransactionCanceledException' });
     expect((await store.getRun(start.runId)).status).toBe('active');
+    expect(await store.getVerifiedAudit(start.runId)).toBeUndefined();
+  });
+
+  it('does not finish or enqueue a score when the audit key already exists', async () => {
+    const { start, args } = await newGuestRun();
+    await documentClient.send(new PutCommand({
+      TableName: tableName, Item: { pk: `AUDIT#${start.runId}`, kind: 'collision' },
+    }));
+    await expect(finishRun(args)).rejects.toMatchObject({ name: 'TransactionCanceledException' });
+    expect((await store.getRun(start.runId)).status).toBe('active');
+    expect(await store.getOutbox(start.runId)).toBeUndefined();
   });
 
   it('persists a rejected finish without creating an outbox', async () => {
@@ -163,6 +185,7 @@ describe.runIf(Boolean(endpoint))('DynamoDB Local run store', () => {
     expect((await documentClient.send(new GetCommand({
       TableName: tableName, Key: { pk: `OUTBOX#${start.runId}` }, ConsistentRead: true,
     }))).Item).toBeUndefined();
+    expect(await store.getVerifiedAudit(start.runId)).toBeUndefined();
   });
 
   it('uses conditional inserts for run IDs and guest hashes', async () => {

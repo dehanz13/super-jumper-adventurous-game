@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "hearso/nova.run.verified.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["eventId", "eventType", "eventVersion", "gameId", "runId", "playerClass", "score", "achievedAt", "boards", "versions"],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "const": "nova.run.verified" },
+    "eventVersion": { "const": 1 },
+    "gameId": { "const": "nova-orbit-jump" },
+    "runId": { "type": "string", "format": "uuid" },
+    "playerClass": { "enum": ["guest", "account"] },
+    "score": { "type": "integer", "minimum": 0 },
+    "achievedAt": { "type": "string", "format": "date-time" },
+    "boards": {
+      "oneOf": [
+        { "const": ["weekly"] },
+        { "const": ["weekly", "alltime"] }
+      ]
+    },
+    "versions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["levelSetVersion", "rulesVersion", "scoringVersion"],
+      "properties": {
+        "levelSetVersion": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "rulesVersion": { "type": "integer", "minimum": 1 },
+        "scoringVersion": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}
