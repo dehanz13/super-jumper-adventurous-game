@@ -268,6 +268,24 @@ export function createDynamoRunStore({ documentClient, tableName }) {
     }
   }
 
+  async function markAuditHistoryHandoff({ runId, claimToken, nowMs }) {
+    try {
+      await documentClient.send(new UpdateCommand({
+        TableName: tableName, Key: auditKey(runId),
+        UpdateExpression: 'SET outboxStatus = :ready, historyHandedOffAtMs = :now REMOVE claimToken, nextAttemptAtMs',
+        ConditionExpression: 'outboxStatus = :processing AND claimToken = :token AND attribute_exists(historyDeliveredAtMs)',
+        ExpressionAttributeValues: {
+          ':ready': 'audit_history_handed_off', ':processing': 'audit_processing',
+          ':token': claimToken, ':now': nowMs,
+        },
+      }));
+      return true;
+    } catch (error) {
+      if (error?.name === 'ConditionalCheckFailedException') return false;
+      throw error;
+    }
+  }
+
   async function claimOutbox({ runId, nowMs }) {
     const claimToken = randomUUID();
     try {
@@ -392,6 +410,7 @@ export function createDynamoRunStore({ documentClient, tableName }) {
     rescheduleAudit,
     markAuditSinkDelivered,
     markAuditComplete,
+    markAuditHistoryHandoff,
     markDelivered,
     quarantineOutbox,
   };

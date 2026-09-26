@@ -19,11 +19,47 @@ function deps(overrides = {}) {
 describe('Nova audit delivery', () => {
   it('saves each destination acknowledgement before completing the item', async () => {
     const d = deps();
-    expect(await processAuditBatch(d)).toEqual({ examined: 1, delivered: 1, retried: 0, contended: 0 });
+    expect(await processAuditBatch(d)).toEqual({ examined: 1, delivered: 1, historyHandedOff: 0, retried: 0, contended: 0 });
     expect(d.writeHistory).toHaveBeenCalledWith({ event, playerId: 'private-id' });
     expect(d.publishKafka).toHaveBeenCalledWith(event);
     expect(d.markAuditSinkDelivered.mock.calls.map(call => call[0].sink)).toEqual(['history', 'kafka']);
     expect(d.markAuditComplete).toHaveBeenCalledWith({ runId: 'run-1', claimToken: 'lease-1', nowMs: 1000 });
+  });
+
+  it('hands off durable history to the relay without calling a direct Kafka producer', async () => {
+    const d = deps({
+      deliveryMode: 'history_relay', publishKafka: undefined,
+      markAuditHistoryHandoff: vi.fn(async () => true),
+    });
+    expect(await processAuditBatch(d)).toEqual({
+      examined: 1, delivered: 0, historyHandedOff: 1, retried: 0, contended: 0,
+    });
+    expect(d.markAuditSinkDelivered).toHaveBeenCalledWith(expect.objectContaining({ sink: 'history' }));
+    expect(d.markAuditHistoryHandoff).toHaveBeenCalledWith({ runId: 'run-1', claimToken: 'lease-1', nowMs: 1000 });
+    expect(d.markAuditComplete).not.toHaveBeenCalled();
+  });
+
+  it('does not report a history handoff when its lease is lost', async () => {
+    const d = deps({
+      deliveryMode: 'history_relay', publishKafka: undefined,
+      markAuditHistoryHandoff: vi.fn(async () => false),
+    });
+    expect(await processAuditBatch(d)).toMatchObject({ historyHandedOff: 0, contended: 1 });
+  });
+
+  it('finishes a relay handoff after a crash following the history acknowledgement', async () => {
+    const d = deps({
+      deliveryMode: 'history_relay', publishKafka: undefined,
+      claimAudit: vi.fn(async () => ({
+        runId: 'run-1', claimToken: 'lease-2', attemptCount: 2,
+        event, historyDeliveredAtMs: 900,
+      })),
+      markAuditHistoryHandoff: vi.fn(async () => true),
+      writeHistory: vi.fn(async () => { throw new Error('history should not repeat'); }),
+    });
+    expect(await processAuditBatch(d)).toMatchObject({ historyHandedOff: 1, retried: 0 });
+    expect(d.writeHistory).not.toHaveBeenCalled();
+    expect(d.markAuditSinkDelivered).not.toHaveBeenCalled();
   });
 
   it('retries Kafka without writing history again after history is acknowledged', async () => {
@@ -78,6 +114,7 @@ describe('Nova audit delivery', () => {
 
   it('requires bounded worker dependencies and skips an already claimed item', async () => {
     await expect(processAuditBatch(deps({ limit: 26 }))).rejects.toThrow(TypeError);
+    await expect(processAuditBatch(deps({ deliveryMode: 'history_relay' }))).rejects.toThrow(TypeError);
     const d = deps({ claimAudit: vi.fn(async () => null) });
     expect(await processAuditBatch(d)).toMatchObject({ contended: 1, examined: 1 });
     expect(d.writeHistory).not.toHaveBeenCalled();
