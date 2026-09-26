@@ -9,6 +9,11 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    services:
+      dynamodb:
+        image: amazon/dynamodb-local:3.3.1
+        ports:
+          - 8000:8000
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,4 +24,7 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test:coverage
+      - run: npm run test:dynamo-local
+        env:
+          DYNAMODB_LOCAL_ENDPOINT: http://127.0.0.1:8000
       - run: npm run build
