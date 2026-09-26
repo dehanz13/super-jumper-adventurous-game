@@ -499,10 +499,10 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
   };
 
   return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-start sm:justify-center p-4">
-      <div className="relative w-full max-w-[800px]">
+    <div className="game-viewport bg-black">
+      <div className="game-shell relative w-full max-w-[800px]">
         {/* Game Header */}
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-0 px-2 sm:px-4 py-3 bg-black border-b-4 border-[#6756B8]" style={{ fontFamily: 'monospace' }}>
+        <div className="game-header flex flex-wrap items-center justify-between gap-2 mb-0 px-2 sm:px-4 py-3 bg-black border-b-4 border-[#6756B8]" style={{ fontFamily: 'monospace' }}>
           <div className="flex flex-wrap items-center gap-3 sm:gap-10">
             {[['NOVA', String(score).padStart(6,'0'), 'text-white'], ['SHARDS', `✦×${String(shards).padStart(2,'0')}`, 'text-[#F4DB70]'], ['SECTOR', `${level}-1`, 'text-white'], ['TIME', '∞', 'text-white'], ['LIVES', `×${lives}`, 'text-white']].map(([label, val, cls]) => (
               <div key={label} className="text-center"><span className="text-white font-bold text-xs block tracking-wider">{label}</span><div className={`${cls} font-bold text-lg tracking-wider`}>{val}</div></div>
@@ -564,7 +564,7 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
         )}
 
         {/* Game Canvas */}
-        <div className="relative overflow-hidden shadow-2xl shadow-black/50 border-4 border-[#6756B8]">
+        <div className="game-stage relative overflow-hidden shadow-2xl shadow-black/50 border-4 border-[#6756B8]">
           <canvas
             ref={canvasRef}
             width={800}
@@ -572,7 +572,7 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
             onMouseDown={handleCanvasClick}
             onMouseMove={handleMouseMove}
             onMouseLeave={() => mouseRef.current = null}
-            className={`bg-sky-300 block w-[700px] max-w-none sm:w-full h-auto ${gameState === 'editor' ? 'cursor-none' : ''}`}
+            className={`game-canvas bg-sky-300 block ${gameState === 'editor' ? 'cursor-none' : ''}`}
             style={{ imageRendering: 'pixelated' }}
           />
 
@@ -588,21 +588,21 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
           {gameState === 'leaderboard' && boardClient && <SoloBoardScreen getBoard={boardClient} onBack={() => setGameState(boardReturnState)} rankedStatus={ranked.rankState?.status} />}
         </div>
         {/* Mobile Controls */}
-        <div className="touch-controls mt-7 justify-between items-center gap-2 sm:px-4" style={{fontFamily:'monospace'}}>
+        <div className="touch-controls justify-between items-center gap-2 sm:px-4" style={{fontFamily:'monospace'}}>
           <div
-            className="relative w-32 h-32"
+            className="direction-pad relative"
             onPointerDown={handlePadPointerDown}
             onPointerMove={handlePadPointerMove}
             onPointerUp={handlePadPointerEnd}
             onPointerCancel={handlePadPointerEnd}
             onLostPointerCapture={handlePadPointerEnd}
           >
-            {[['ArrowUp','top-0 left-1/2 -translate-x-1/2','↑'],['ArrowDown','bottom-0 left-1/2 -translate-x-1/2','↓'],['ArrowLeft','left-0 top-1/2 -translate-y-1/2','←'],['ArrowRight','right-0 top-1/2 -translate-y-1/2','→']].map(([key,pos,glyph])=>(<button key={key} aria-label={key.replace('Arrow', 'Move ')} className={`absolute ${pos} w-10 h-10 bg-[#303030] active:bg-[#505050] border-2 border-black rounded-sm text-white text-xl font-bold`}>{glyph}</button>))}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-[#303030] border-2 border-black rounded-sm"/>
+            {[['ArrowUp','top-0 left-1/2 -translate-x-1/2','↑'],['ArrowDown','bottom-0 left-1/2 -translate-x-1/2','↓'],['ArrowLeft','left-0 top-1/2 -translate-y-1/2','←'],['ArrowRight','right-0 top-1/2 -translate-y-1/2','→']].map(([key,pos,glyph])=>(<button key={key} aria-label={key.replace('Arrow', 'Move ')} className={`pad-key absolute ${pos} bg-[#303030] active:bg-[#505050] border-2 border-black rounded-sm text-white text-xl font-bold`}>{glyph}</button>))}
+            <div className="pad-key absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#303030] border-2 border-black rounded-sm"/>
           </div>
-          <div className="flex gap-5 items-center">
-            <button aria-label="Jump A" className="w-14 h-14 rounded-full bg-[#A00000] active:bg-[#E52521] border-4 border-[#600000] text-white font-bold text-xl shadow-lg" onPointerDown={handleJumpPointerDown} onPointerUp={handleJumpPointerEnd} onPointerCancel={handleJumpPointerEnd} onLostPointerCapture={handleJumpPointerEnd}>A</button>
-            <button aria-label="Jump B" className="w-14 h-14 rounded-full bg-[#A00000] active:bg-[#E52521] border-4 border-[#600000] text-white font-bold text-xl shadow-lg -mt-2" onPointerDown={handleJumpPointerDown} onPointerUp={handleJumpPointerEnd} onPointerCancel={handleJumpPointerEnd} onLostPointerCapture={handleJumpPointerEnd}>B</button>
+          <div className="jump-buttons flex items-center">
+            <button aria-label="Jump A" className="jump-key rounded-full bg-[#A00000] active:bg-[#E52521] border-4 border-[#600000] text-white font-bold text-xl shadow-lg" onPointerDown={handleJumpPointerDown} onPointerUp={handleJumpPointerEnd} onPointerCancel={handleJumpPointerEnd} onLostPointerCapture={handleJumpPointerEnd}>A</button>
+            <button aria-label="Jump B" className="jump-key rounded-full bg-[#A00000] active:bg-[#E52521] border-4 border-[#600000] text-white font-bold text-xl shadow-lg -mt-2" onPointerDown={handleJumpPointerDown} onPointerUp={handleJumpPointerEnd} onPointerCancel={handleJumpPointerEnd} onLostPointerCapture={handleJumpPointerEnd}>B</button>
           </div>
         </div>
       </div>

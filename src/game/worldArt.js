@@ -158,19 +158,52 @@ export function drawSpaceBackdrop(ctx, offset, level) {
     ctx.fillRect(x, y, index % 5 === 0 ? 3 : 2, index % 5 === 0 ? 3 : 2);
   }
 
-  // Distant ringed planets use parallax, while the foreground sockets stay fixed.
+  // Each planet is layered like Nova's menu emblem: dark rim, mineral bands,
+  // a ring passing behind and in front, and a small orbit glint.
   for (const [worldX, y, radius] of [[170, 185, 72], [920, 150, 50], [1850, 205, 78], [2950, 140, 58]]) {
     const x = worldX - offset * 0.2;
     if (x < -radius * 2 || x > 800 + radius * 2) continue;
-    ctx.fillStyle = '#6674AA';
+    ctx.save();
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 13;
+    ctx.beginPath();
+    ctx.ellipse(x, y, radius * 1.38, radius * 0.38, -0.22, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = TEAL;
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.ellipse(x, y, radius * 1.38, radius * 0.38, -0.22, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = INK;
+    ctx.beginPath();
+    ctx.arc(x, y, radius + 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = level === 2 ? '#8065A9' : level === 3 ? '#6F93B9' : '#786FB2';
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = TEAL;
-    ctx.lineWidth = 5;
+    ctx.save();
     ctx.beginPath();
-    ctx.ellipse(x, y, radius * 1.35, radius * 0.35, -0.2, 0, Math.PI * 2);
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.fillStyle = 'rgba(231,250,255,0.18)';
+    ctx.fillRect(x - radius, y - radius * 0.38, radius * 2, radius * 0.1);
+    ctx.fillRect(x - radius, y + radius * 0.27, radius * 2, radius * 0.13);
+    ctx.fillStyle = 'rgba(23,36,63,0.27)';
+    for (const [dx, dy, size] of [[-0.27, -0.28, 0.12], [0.31, -0.12, 0.08], [0.2, 0.4, 0.15]]) {
+      ctx.beginPath();
+      ctx.arc(x + radius * dx, y + radius * dy, radius * size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.strokeStyle = LIGHT;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(x, y, radius * 1.38, radius * 0.38, -0.22, 0, Math.PI);
     ctx.stroke();
+    ctx.fillStyle = GOLD;
+    ctx.fillRect(x + radius * 1.43, y - radius * 0.2, 4, 4);
+    ctx.restore();
   }
 
   if (level === 1) {

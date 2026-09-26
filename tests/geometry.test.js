@@ -3,16 +3,17 @@ import { alignGroundEnemy, beaconFinishBounds, createEditorCreature, creatureHur
 
 describe('player sprite bounds', () => {
   it.each([
-    ['small', 50, 35.1],
-    ['big', 65, 39],
-    ['plasma', 65, 39],
-  ])('centers and grounds the %s sprite', (powerUp, height, size) => {
+    ['small', 50],
+    ['big', 65],
+    ['plasma', 65],
+  ])('fills the movement box from helmet to boots for the %s sprite', (powerUp, height) => {
     const player = { x: 100, y: 200, width: 40, height, powerUp };
     const bounds = playerSpriteBounds(player);
 
-    expect(bounds.width).toBe(size);
-    expect(bounds.height).toBe(size);
+    expect(bounds.width).toBe(player.width);
+    expect(bounds.height).toBe(height);
     expect(bounds.x + bounds.width / 2).toBe(player.x + player.width / 2);
+    expect(bounds.y).toBe(player.y);
     expect(bounds.y + bounds.height).toBe(player.y + player.height);
   });
 });

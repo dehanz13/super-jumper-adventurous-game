@@ -28,6 +28,7 @@ export function drawExplorer(ctx, player, offset, animationTime = Date.now()) {
 
   const sprite = playerSpriteBounds(player);
   const unit = sprite.pixelSize;
+  const unitY = sprite.pixelSizeY;
   const size = sprite.width;
   const x = sprite.x - offset;
   const y = sprite.y;
@@ -41,10 +42,10 @@ export function drawExplorer(ctx, player, offset, animationTime = Date.now()) {
     : COLORS.trim;
   const pixel = (color, gridX, gridY, width = 1, height = 1) => {
     const left = Math.round(gridX * unit);
-    const top = Math.round(gridY * unit);
+    const top = Math.round(gridY * unitY);
     rectangle(ctx, color, left, top,
       Math.round((gridX + width) * unit) - left,
-      Math.round((gridY + height) * unit) - top);
+      Math.round((gridY + height) * unitY) - top);
   };
 
   ctx.save();

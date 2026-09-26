@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { gsap, useGSAP } from '@/lib/animation';
+import { OrbitPlanet } from './GameScreens';
 
 export default function IntroScreen({ introPhase, onSkip }) {
   const rootRef = useRef(null);
@@ -26,7 +27,7 @@ export default function IntroScreen({ introPhase, onSkip }) {
                 <div key={i} className="absolute bg-[#E7FAFF]" style={{ left: `${(i * 37) % 100}%`, top: `${(i * 29) % 70}%`, width: i % 4 === 0 ? 3 : 2, height: i % 4 === 0 ? 3 : 2 }} />
               ))}
             </div>
-            <div className="intro-planet absolute top-[18%] right-[12%] w-24 h-24 sm:w-40 sm:h-40 rounded-full bg-[#7788AC] border-8 border-[#28D9CF]/70" />
+            <OrbitPlanet className="intro-planet !top-[18%] !right-[12%]" />
             <div className="absolute bottom-0 w-full h-24 bg-[#6756B8]">
               <div className="w-full h-4 bg-[#28D9CF]" />
             </div>
