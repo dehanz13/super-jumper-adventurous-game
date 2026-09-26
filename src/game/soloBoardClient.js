@@ -20,6 +20,12 @@ export function currentUtcWeek(nowMs = Date.now()) {
   return `weekly-${year}-W${String(week).padStart(2, '0')}`;
 }
 
+export function nextUtcWeekBoundary(nowMs = Date.now()) {
+  const date = new Date(nowMs);
+  const daysUntilMonday = (8 - date.getUTCDay()) % 7 || 7;
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + daysUntilMonday);
+}
+
 function trackingIdV7(nowMs = Date.now()) {
   const bytes = new Uint8Array(16);
   globalThis.crypto.getRandomValues(bytes);
