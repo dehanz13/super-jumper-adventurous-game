@@ -14,6 +14,7 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+cdk.out
 coverage
 test-results
 playwright-report
