@@ -76,7 +76,7 @@ export async function readAuthenticatedRun({ runId, runToken, getRun }) {
 
 function existingResult(run, requestDigest) {
   if (run.status === 'active') return null;
-  if (!['pending_write', 'ranked', 'rejected'].includes(run.status)) {
+  if (!['pending_write', 'ranked', 'rejected', 'delivery_failed'].includes(run.status)) {
     throw new RunFinishError('run_unavailable', 503);
   }
   if (run.requestDigest !== requestDigest) throw new RunFinishError('finish_conflict', 409);
@@ -86,6 +86,7 @@ function existingResult(run, requestDigest) {
     status: run.status,
     score: run.score,
     ...(run.status === 'ranked' && run.ranks && { ranks: run.ranks }),
+    ...(run.status === 'delivery_failed' && { failureCode: run.failureCode }),
   };
 }
 

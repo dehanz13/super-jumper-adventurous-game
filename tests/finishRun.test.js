@@ -115,6 +115,17 @@ describe('authenticated ranked finish', () => {
     expect(store.outbox).toHaveLength(1);
   });
 
+  it('returns a saved delivery failure on an identical retry', async () => {
+    const { store, run, args } = await setup();
+    await finishRun(args);
+    store.records.set(run.runId, {
+      ...store.records.get(run.runId), status: 'delivery_failed', failureCode: 'delivery_window_expired',
+    });
+    expect(await finishRun(args)).toEqual({
+      runId: run.runId, status: 'delivery_failed', score, failureCode: 'delivery_window_expired',
+    });
+  });
+
   it('records a rejected claim once and returns the same rejection on retry', async () => {
     const { store, run, args } = await setup();
     const invalid = { transcript: { ...transcript, endedAs: 'gameover' } };
