@@ -20,13 +20,15 @@ export function playerSpriteBounds(player) {
 }
 
 export function playerHurtbox(player) {
-  const sprite = playerSpriteBounds(player);
-  const inset = sprite.pixelSize;
+  // Preserve the version 1 contact silhouette for ranked replay compatibility.
+  // The illustration fills the movement box, while this inset keeps contacts fair.
+  const pixelSize = player.powerUp === 'small' ? 2.7 : 3;
+  const size = SPRITE_CELLS * pixelSize;
   return {
-    x: sprite.x + inset,
-    y: sprite.y + sprite.pixelSizeY * 2,
-    width: sprite.width - inset * 2,
-    height: sprite.height - sprite.pixelSizeY * 2 - inset * 2,
+    x: player.x + (player.width - size) / 2 + pixelSize,
+    y: player.y + player.height - size + pixelSize * 2,
+    width: size - pixelSize * 2,
+    height: size - pixelSize * 2,
   };
 }
 
