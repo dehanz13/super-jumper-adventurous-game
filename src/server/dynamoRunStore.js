@@ -9,6 +9,7 @@ const DELIVERED_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 
 function runKey(runId) { return { pk: `RUN#${runId}` }; }
 function guestKey(tokenHash) { return { pk: `GUEST#${tokenHash}` }; }
+function ticketKey(jti) { return { pk: `TICKET#${jti}` }; }
 function outboxKey(runId) { return { pk: `OUTBOX#${runId}` }; }
 function auditKey(runId) { return { pk: `AUDIT#${runId}` }; }
 
@@ -59,6 +60,37 @@ export function createDynamoRunStore({ documentClient, tableName }) {
       Item: { pk: runKey(record.runId).pk, kind: 'run', ...record, ttl: record.recordExpiresAtSeconds },
       ConditionExpression: 'attribute_not_exists(pk)',
     }));
+  }
+
+  async function consumeLaunchTicketAndSaveRun({ jti, ticketExpiresAtMs, record }) {
+    try {
+      await documentClient.send(new TransactWriteCommand({
+        TransactItems: [
+          { Put: {
+            TableName: tableName,
+            Item: {
+              ...ticketKey(jti), kind: 'consumed_ticket',
+              ttl: Math.ceil((ticketExpiresAtMs + 24 * 60 * 60 * 1000) / 1000),
+            },
+            ConditionExpression: 'attribute_not_exists(pk)',
+          } },
+          { Put: {
+            TableName: tableName,
+            Item: { ...runKey(record.runId), kind: 'run', ...record, ttl: record.recordExpiresAtSeconds },
+            ConditionExpression: 'attribute_not_exists(pk)',
+          } },
+        ],
+      }));
+      return true;
+    } catch (error) {
+      if (error?.name === 'TransactionCanceledException') {
+        const used = await documentClient.send(new GetCommand({
+          TableName: tableName, Key: ticketKey(jti), ConsistentRead: true,
+        }));
+        if (used.Item) return false;
+      }
+      throw error;
+    }
   }
 
   async function rejectRun({ runId, expectedStatus, requestDigest, rejectionCode }) {
@@ -349,6 +381,7 @@ export function createDynamoRunStore({ documentClient, tableName }) {
     getGuestIdentityByTokenHash,
     saveGuestIdentity,
     saveActiveRun,
+    consumeLaunchTicketAndSaveRun,
     rejectRun,
     commitVerifiedResultAndOutbox,
     listDueOutbox,

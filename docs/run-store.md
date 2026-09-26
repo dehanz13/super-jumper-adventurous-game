@@ -5,6 +5,7 @@ The game-owned run service uses one DynamoDB table with a string partition key n
 | Item | `pk` | Lifetime | Purpose |
 | --- | --- | --- | --- |
 | Guest | `GUEST#<SHA-256 credential hash>` | Current UTC week plus one day of cleanup grace | Reuse one pseudonymous player ID during a week. The plaintext credential is never stored. |
+| Consumed account ticket | `TICKET#<jti>` | Ticket expiry plus one day of cleanup grace | Prevent reuse of a Hearso account handoff. This marker and its active run are written in one transaction. |
 | Run | `RUN#<UUID>` | One day after start | Authenticate one attempt and retain its verification result for retries. |
 | Outbox | `OUTBOX#<UUID>` | Until a future worker confirms or quarantines delivery | Retry the verified leaderboard submission with the run ID as match ID and idempotency key. |
 | Verified audit | `AUDIT#<UUID>` | No automatic TTL | Retain the verified fact for a Supabase history projection and a dedicated Kafka event. The private `playerId` stays outside the public event and must be handled by account deletion. |

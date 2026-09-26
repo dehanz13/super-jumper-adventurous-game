@@ -85,6 +85,8 @@ test('a browser-played campaign passes real verification and reaches the outbox'
   await page.getByLabel('Public name').fill('Nova');
   await page.getByLabel('Country').selectOption('US');
   await page.getByRole('button', { name: /press start/i }).click();
+  await expect(page.getByRole('button', { name: 'Pause game' })).toBeVisible({ timeout: 15_000 });
+  await page.evaluate(() => document.activeElement?.blur());
   await page.keyboard.down('ArrowRight');
   await page.keyboard.down('Space');
   await expect(page.getByText('GET READY FOR SECTOR 2-1')).toBeVisible({ timeout: 35_000 });

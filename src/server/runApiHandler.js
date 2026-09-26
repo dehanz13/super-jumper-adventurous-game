@@ -1,6 +1,7 @@
 import { finishRun, MAX_FINISH_BODY_BYTES, readAuthenticatedRun, RunFinishError } from './finishRun.js';
 import { GuestIdentityError, startGuestRun } from './guestIdentity.js';
 import { RunIssueError } from './issueRun.js';
+import { AccountTicketError, startAccountRun, validTicketSecrets } from './accountLaunchTicket.js';
 
 const START_BODY_BYTES = 8 * 1024;
 const RUN_PATH = /^\/v1\/runs\/([0-9a-f-]{36})(\/finish)?$/i;
@@ -12,6 +13,7 @@ const TITLES = {
   origin_not_allowed: 'Origin not allowed',
   invalid_run_token: 'Invalid run token',
   invalid_guest_credential: 'Invalid guest credential',
+  invalid_launch_ticket: 'Invalid launch ticket',
   account_handoff_unavailable: 'Hearso account handoff unavailable',
   service_unavailable: 'Run service unavailable',
   not_found: 'Run route not found',
@@ -56,7 +58,7 @@ function identityInput(body) {
   if (keys.length !== 1 || !['guestProfile', 'guestCredential', 'launchTicket'].includes(keys[0])) {
     throw new RunFinishError('invalid_request', 400);
   }
-  if (keys[0] === 'launchTicket') throw new RunFinishError('account_handoff_unavailable', 501);
+  if (keys[0] === 'launchTicket') return { launchTicket: body.launchTicket };
   if (keys[0] === 'guestProfile') {
     const profile = body.guestProfile;
     if (!profile || typeof profile !== 'object' || Array.isArray(profile)
@@ -77,7 +79,7 @@ function bearerToken(event) {
 }
 
 // No raw error, body, token, or identity value is sent to responses or logs.
-export function createRunApiHandler({ store, gameId, allowedOrigins = [], now = Date.now }) {
+export function createRunApiHandler({ store, gameId, allowedOrigins = [], ticketSecrets = [], now = Date.now }) {
   if (!store || typeof now !== 'function' || !Array.isArray(allowedOrigins)) {
     throw new TypeError('valid run API dependencies are required');
   }
@@ -114,7 +116,12 @@ export function createRunApiHandler({ store, gameId, allowedOrigins = [], now = 
     try {
       if (isStart) {
         const identity = identityInput(parseBody(event, START_BODY_BYTES));
-        const result = await startGuestRun({ ...identity, ...store, nowMs: now() });
+        if (identity.launchTicket !== undefined && !validTicketSecrets(ticketSecrets)) {
+          return problem(501, 'account_handoff_unavailable');
+        }
+        const result = identity.launchTicket === undefined
+          ? await startGuestRun({ ...identity, ...store, nowMs: now() })
+          : await startAccountRun({ ...identity, ...store, secrets: ticketSecrets, nowMs: now() });
         return respond(201, result);
       }
       const runId = match[1];
@@ -139,6 +146,7 @@ export function createRunApiHandler({ store, gameId, allowedOrigins = [], now = 
         return problem(status, error.code);
       }
       if (error instanceof RunIssueError) return problem(503, 'service_unavailable');
+      if (error instanceof AccountTicketError) return problem(401, 'invalid_launch_ticket');
       return problem(503, 'service_unavailable');
     }
   };

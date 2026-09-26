@@ -13,6 +13,7 @@ import { issueRun } from '../src/server/issueRun';
 import { LeaderboardSubmissionError } from '../src/server/leaderboardSubmission';
 import { DELIVERY_WINDOW_MS, processOutboxBatch } from '../src/server/outboxWorker';
 import { createRunApiHandler } from '../src/server/runApiHandler';
+import { mintAccountLaunchTicket, startAccountRun, AccountTicketError } from '../src/server/accountLaunchTicket';
 
 const endpoint = process.env.DYNAMODB_LOCAL_ENDPOINT;
 if (process.env.REQUIRE_DYNAMO_LOCAL === '1' && !endpoint) {
@@ -102,6 +103,42 @@ describe.runIf(Boolean(endpoint))('DynamoDB Local run store', () => {
       gameId: 'nova-orbit-jump', nowMs,
     } };
   }
+
+  it('consumes an account ticket atomically with its run', async () => {
+    const secret = 'nova-local-account-ticket-secret-32-bytes';
+    const launchTicket = mintAccountLaunchTicket({
+      jti: randomUUID(), playerId: 'hearso_player_1', displayName: 'Explorer',
+      country: 'US', issuedAtMs: startMs,
+    }, secret);
+    const args = {
+      launchTicket, secrets: [secret],
+      consumeLaunchTicketAndSaveRun: store.consumeLaunchTicketAndSaveRun, nowMs: startMs,
+    };
+    const first = await startAccountRun(args);
+    expect(await store.getRun(first.runId)).toMatchObject({ playerClass: 'account', playerId: 'hearso_player_1' });
+    await expect(startAccountRun(args)).rejects.toThrow(AccountTicketError);
+    const ticketRow = await documentClient.send(new GetCommand({
+      TableName: tableName, Key: { pk: `TICKET#${JSON.parse(Buffer.from(launchTicket.split('.')[1], 'base64url').toString()).jti}` },
+      ConsistentRead: true,
+    }));
+    expect(ticketRow.Item).toMatchObject({ kind: 'consumed_ticket' });
+    expect(JSON.stringify(ticketRow.Item)).not.toContain(launchTicket);
+  });
+
+  it('keeps a ticket unused when the active run insert collides', async () => {
+    const jti = randomUUID();
+    const runId = randomUUID();
+    await documentClient.send(new PutCommand({
+      TableName: tableName, Item: { pk: `RUN#${runId}`, kind: 'collision' },
+    }));
+    await expect(store.consumeLaunchTicketAndSaveRun({
+      jti, ticketExpiresAtMs: startMs + 30_000,
+      record: { runId, recordExpiresAtSeconds: Math.ceil(startMs / 1000) + 86_400 },
+    })).rejects.toMatchObject({ name: 'TransactionCanceledException' });
+    expect((await documentClient.send(new GetCommand({
+      TableName: tableName, Key: { pk: `TICKET#${jti}` }, ConsistentRead: true,
+    }))).Item).toBeUndefined();
+  });
 
   it('persists a guest identity, run, and atomic verified outbox without plaintext secrets', async () => {
     const { start, args } = await newGuestRun();
