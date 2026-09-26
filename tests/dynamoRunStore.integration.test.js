@@ -6,6 +6,7 @@ import { appendInputStep, createInputTranscript, sealInputTranscript } from '../
 import { advanceSimulation, createSimulationState } from '../src/game/simulation';
 import { createInitialLevelState } from '../src/game/worldState';
 import { createDynamoRunStore } from '../src/server/dynamoRunStore';
+import { processAuditBatch } from '../src/server/auditWorker';
 import { finishRun, RunFinishError } from '../src/server/finishRun';
 import { startGuestRun } from '../src/server/guestIdentity';
 import { issueRun } from '../src/server/issueRun';
@@ -186,6 +187,57 @@ describe.runIf(Boolean(endpoint))('DynamoDB Local run store', () => {
       TableName: tableName, Key: { pk: `OUTBOX#${start.runId}` }, ConsistentRead: true,
     }))).Item).toBeUndefined();
     expect(await store.getVerifiedAudit(start.runId)).toBeUndefined();
+  });
+
+  it('retries Kafka after saving history, then completes audit without affecting ranking', async () => {
+    const { start, args } = await newGuestRun();
+    await finishRun(args);
+    expect((await store.listDueAudit({ nowMs, limit: 25 })).some(item => item.runId === start.runId)).toBe(true);
+    const onlyThisAudit = async () => [{ runId: start.runId }];
+    let historyCalls = 0;
+    const first = await processAuditBatch({
+      ...store, listDueAudit: onlyThisAudit, now: () => nowMs + 1000,
+      writeHistory: async ({ event, playerId }) => {
+        expect(event.eventId).toBe(start.runId);
+        expect(playerId).toBe((await store.getRun(start.runId)).playerId);
+        historyCalls++;
+      },
+      publishKafka: async () => { throw new Error('broker down'); },
+    });
+    expect(first).toMatchObject({ retried: 1, delivered: 0 });
+    expect(await store.getVerifiedAudit(start.runId)).toMatchObject({
+      outboxStatus: 'audit_pending', historyDeliveredAtMs: nowMs + 1000,
+      lastFailureCode: 'kafka_unavailable',
+    });
+    const second = await processAuditBatch({
+      ...store, listDueAudit: onlyThisAudit, now: () => nowMs + 6000,
+      writeHistory: async () => { throw new Error('history must not repeat'); },
+      publishKafka: async event => { expect(event.eventId).toBe(start.runId); },
+    });
+    expect(second).toMatchObject({ delivered: 1, retried: 0 });
+    expect(historyCalls).toBe(1);
+    expect(await store.getVerifiedAudit(start.runId)).toMatchObject({
+      outboxStatus: 'audit_delivered', attemptCount: 2,
+      historyDeliveredAtMs: nowMs + 1000, kafkaDeliveredAtMs: nowMs + 6000,
+    });
+    expect(await store.getOutbox(start.runId)).toMatchObject({ outboxStatus: 'pending' });
+  });
+
+  it('rejects a stale audit lease and requires both destinations before completion', async () => {
+    const { start, args } = await newGuestRun();
+    await finishRun(args);
+    const first = await store.claimAudit({ runId: start.runId, nowMs });
+    expect(await store.claimAudit({ runId: start.runId, nowMs: nowMs + 1000 })).toBeNull();
+    const second = await store.claimAudit({ runId: start.runId, nowMs: nowMs + 2 * 60 * 1000 });
+    expect(second.claimToken).not.toBe(first.claimToken);
+    expect(await store.markAuditSinkDelivered({ runId: start.runId, claimToken: first.claimToken, sink: 'history', nowMs })).toBe(false);
+    expect(await store.markAuditComplete({ runId: start.runId, claimToken: second.claimToken, nowMs })).toBe(false);
+    await expect(store.markAuditSinkDelivered({ runId: start.runId, claimToken: second.claimToken, sink: 'bad', nowMs })).rejects.toThrow(TypeError);
+    await expect(store.markAuditSinkDelivered({ runId: start.runId, claimToken: second.claimToken, sink: 'toString', nowMs })).rejects.toThrow(TypeError);
+    expect(await store.markAuditSinkDelivered({ runId: start.runId, claimToken: second.claimToken, sink: 'history', nowMs })).toBe(true);
+    expect(await store.markAuditSinkDelivered({ runId: start.runId, claimToken: second.claimToken, sink: 'kafka', nowMs })).toBe(true);
+    expect(await store.markAuditComplete({ runId: start.runId, claimToken: second.claimToken, nowMs })).toBe(true);
+    expect(await store.rescheduleAudit({ runId: start.runId, claimToken: second.claimToken, nextAttemptAtMs: nowMs + 1000, failureCode: 'stale' })).toBe(false);
   });
 
   it('uses conditional inserts for run IDs and guest hashes', async () => {

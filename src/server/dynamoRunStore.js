@@ -148,6 +148,94 @@ export function createDynamoRunStore({ documentClient, tableName }) {
     return results.flat().sort((a, b) => a.nextAttemptAtMs - b.nextAttemptAtMs).slice(0, limit);
   }
 
+  async function listDueAudit({ nowMs, limit }) {
+    const results = await Promise.all(['audit_pending', 'audit_processing'].map(async status => {
+      const response = await documentClient.send(new QueryCommand({
+        TableName: tableName, IndexName: OUTBOX_INDEX,
+        KeyConditionExpression: '#status = :status AND nextAttemptAtMs <= :now',
+        ExpressionAttributeNames: { '#status': 'outboxStatus' },
+        ExpressionAttributeValues: { ':status': status, ':now': nowMs },
+        Limit: limit,
+      }));
+      return response.Items ?? [];
+    }));
+    return results.flat().sort((a, b) => a.nextAttemptAtMs - b.nextAttemptAtMs).slice(0, limit);
+  }
+
+  async function claimAudit({ runId, nowMs }) {
+    const claimToken = randomUUID();
+    try {
+      const response = await documentClient.send(new UpdateCommand({
+        TableName: tableName, Key: auditKey(runId),
+        UpdateExpression: 'SET outboxStatus = :processing, claimToken = :token, nextAttemptAtMs = :lease ADD attemptCount :one',
+        ConditionExpression: '(outboxStatus = :pending OR outboxStatus = :processing) AND nextAttemptAtMs <= :now',
+        ExpressionAttributeValues: {
+          ':pending': 'audit_pending', ':processing': 'audit_processing', ':token': claimToken,
+          ':lease': nowMs + LEASE_MS, ':now': nowMs, ':one': 1,
+        },
+        ReturnValues: 'ALL_NEW',
+      }));
+      return response.Attributes;
+    } catch (error) {
+      if (error?.name === 'ConditionalCheckFailedException') return null;
+      throw error;
+    }
+  }
+
+  async function markAuditSinkDelivered({ runId, claimToken, sink, nowMs }) {
+    const marker = sink === 'history' ? 'historyDeliveredAtMs'
+      : sink === 'kafka' ? 'kafkaDeliveredAtMs' : null;
+    if (!marker || !Number.isSafeInteger(nowMs) || nowMs < 0) throw new TypeError('valid audit sink and time are required');
+    try {
+      await documentClient.send(new UpdateCommand({
+        TableName: tableName, Key: auditKey(runId),
+        UpdateExpression: 'SET #marker = :now',
+        ConditionExpression: 'outboxStatus = :processing AND claimToken = :token AND attribute_not_exists(#marker)',
+        ExpressionAttributeNames: { '#marker': marker },
+        ExpressionAttributeValues: { ':processing': 'audit_processing', ':token': claimToken, ':now': nowMs },
+      }));
+      return true;
+    } catch (error) {
+      if (error?.name === 'ConditionalCheckFailedException') return false;
+      throw error;
+    }
+  }
+
+  async function rescheduleAudit({ runId, claimToken, nextAttemptAtMs, failureCode }) {
+    try {
+      await documentClient.send(new UpdateCommand({
+        TableName: tableName, Key: auditKey(runId),
+        UpdateExpression: 'SET outboxStatus = :pending, nextAttemptAtMs = :next, lastFailureCode = :failure REMOVE claimToken',
+        ConditionExpression: 'outboxStatus = :processing AND claimToken = :token',
+        ExpressionAttributeValues: {
+          ':pending': 'audit_pending', ':processing': 'audit_processing', ':token': claimToken,
+          ':next': nextAttemptAtMs, ':failure': failureCode,
+        },
+      }));
+      return true;
+    } catch (error) {
+      if (error?.name === 'ConditionalCheckFailedException') return false;
+      throw error;
+    }
+  }
+
+  async function markAuditComplete({ runId, claimToken, nowMs }) {
+    try {
+      await documentClient.send(new UpdateCommand({
+        TableName: tableName, Key: auditKey(runId),
+        UpdateExpression: 'SET outboxStatus = :delivered, deliveredAtMs = :now REMOVE claimToken, nextAttemptAtMs',
+        ConditionExpression: 'outboxStatus = :processing AND claimToken = :token AND attribute_exists(historyDeliveredAtMs) AND attribute_exists(kafkaDeliveredAtMs)',
+        ExpressionAttributeValues: {
+          ':delivered': 'audit_delivered', ':processing': 'audit_processing', ':token': claimToken, ':now': nowMs,
+        },
+      }));
+      return true;
+    } catch (error) {
+      if (error?.name === 'ConditionalCheckFailedException') return false;
+      throw error;
+    }
+  }
+
   async function claimOutbox({ runId, nowMs }) {
     const claimToken = randomUUID();
     try {
@@ -264,8 +352,13 @@ export function createDynamoRunStore({ documentClient, tableName }) {
     rejectRun,
     commitVerifiedResultAndOutbox,
     listDueOutbox,
+    listDueAudit,
     claimOutbox,
+    claimAudit,
     rescheduleOutbox,
+    rescheduleAudit,
+    markAuditSinkDelivered,
+    markAuditComplete,
     markDelivered,
     quarantineOutbox,
   };
