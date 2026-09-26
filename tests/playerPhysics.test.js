@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { stepPlayerPhysics } from '../src/game/playerPhysics';
+import { playerSpriteBounds } from '../src/game/geometry';
 
 const player = (overrides = {}) => ({
   x: 100, y: 450, width: 40, height: 50, velocityX: 0, velocityY: 0,
-  onGround: true, facingRight: true, isJumping: false, ...overrides,
+  onGround: true, facingRight: true, isJumping: false, powerUp: 'small', ...overrides,
 });
 const input = (overrides = {}) => ({ left: false, right: false, jump: false, fire: false, ...overrides });
 
@@ -31,6 +32,7 @@ describe('deterministic player step', () => {
     const block = { x: 100, y: 350, width: 40, height: 20 };
     const rising = stepPlayerPhysics(player({ y: 374, velocityY: -5, onGround: false }), input(), [block]);
     expect(rising.player).toMatchObject({ y: 370, velocityY: 0 });
+    expect(playerSpriteBounds(rising.player).y).toBeCloseTo(block.y + block.height);
     expect(rising.headHits).toEqual([0]);
 
     const wall = { x: 130, y: 400, width: 40, height: 50 };

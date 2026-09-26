@@ -6,15 +6,16 @@ export function rectanglesOverlap(a, b) {
 }
 
 export function playerSpriteBounds(player) {
-  const pixelSize = player.powerUp === 'small' ? 2.7 : 3;
-  const size = SPRITE_CELLS * pixelSize;
+  const pixelSize = player.width / SPRITE_CELLS;
+  const pixelSizeY = player.height / SPRITE_CELLS;
 
   return {
-    x: player.x + (player.width - size) / 2,
-    y: player.y + player.height - size,
-    width: size,
-    height: size,
+    x: player.x,
+    y: player.y,
+    width: player.width,
+    height: player.height,
     pixelSize,
+    pixelSizeY,
   };
 }
 
@@ -23,9 +24,9 @@ export function playerHurtbox(player) {
   const inset = sprite.pixelSize;
   return {
     x: sprite.x + inset,
-    y: sprite.y + inset * 2,
+    y: sprite.y + sprite.pixelSizeY * 2,
     width: sprite.width - inset * 2,
-    height: sprite.height - inset * 2,
+    height: sprite.height - sprite.pixelSizeY * 2 - inset * 2,
   };
 }
 

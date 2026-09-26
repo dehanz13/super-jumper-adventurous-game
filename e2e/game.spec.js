@@ -147,9 +147,39 @@ test('mobile menu and controls use the available vertical space', async ({ page,
   expect(start.y - (title.y + title.height)).toBeGreaterThan(40);
   expect(creator.y - (start.y + start.height)).toBeGreaterThan(25);
   expect(instructions.y - (creator.y + creator.height)).toBeGreaterThan(20);
-  expect(pad.y - (canvas.y + canvas.height)).toBeGreaterThanOrEqual(24);
+  expect(pad.y - (canvas.y + canvas.height)).toBeGreaterThanOrEqual(8);
   expect(jumpB.x - (jumpA.x + jumpA.width)).toBeGreaterThanOrEqual(20);
   expect(pad.y + pad.height).toBeLessThanOrEqual(page.viewportSize().height - 16);
+});
+
+test('the game shell fits phone, tablet, and desktop viewports', async ({ browser }) => {
+  for (const [width, height, touch] of [[320, 568, true], [375, 667, true], [667, 375, true], [768, 1024, true], [1024, 768, true], [1280, 800, false]]) {
+    const context = await browser.newContext({ viewport: { width, height }, isMobile: touch, hasTouch: touch });
+    const page = await context.newPage();
+    await page.goto('/');
+    await page.getByText(/skip/i).click();
+    await expect(page.getByRole('button', { name: /press start/i })).toBeVisible();
+    const layout = await page.evaluate(() => {
+      const box = selector => document.querySelector(selector).getBoundingClientRect();
+      return {
+        scrollWidth: document.documentElement.scrollWidth,
+        scrollHeight: document.documentElement.scrollHeight,
+        stage: box('.game-stage'),
+        instructions: box('.start-instructions'),
+        pad: box('.direction-pad'),
+      };
+    });
+    expect(layout.scrollWidth, `${width}px horizontal overflow`).toBeLessThanOrEqual(width);
+    expect(layout.scrollHeight, `${height}px vertical overflow`).toBeLessThanOrEqual(height);
+    expect(layout.instructions.bottom).toBeLessThanOrEqual(layout.stage.bottom);
+    expect(layout.instructions.top).toBeGreaterThan(layout.stage.top + layout.stage.height * 0.65);
+    if (touch) {
+      expect(layout.pad.bottom).toBeLessThanOrEqual(height);
+      expect(layout.pad.top).toBeGreaterThan(layout.stage.bottom);
+      if (width >= 600 && height >= 500) expect(layout.pad.width).toBeGreaterThan(130);
+    }
+    await context.close();
+  }
 });
 
 test('dragging across the direction pad reverses movement', async ({ page, isMobile }) => {

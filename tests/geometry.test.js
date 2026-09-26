@@ -3,16 +3,17 @@ import { alignGroundEnemy, beaconFinishBounds, createEditorCreature, creatureHur
 
 describe('player sprite bounds', () => {
   it.each([
-    ['small', 50, 35.1],
-    ['big', 65, 39],
-    ['plasma', 65, 39],
-  ])('centers and grounds the %s sprite', (powerUp, height, size) => {
+    ['small', 50],
+    ['big', 65],
+    ['plasma', 65],
+  ])('fills the movement box from helmet to boots for the %s sprite', (powerUp, height) => {
     const player = { x: 100, y: 200, width: 40, height, powerUp };
     const bounds = playerSpriteBounds(player);
 
-    expect(bounds.width).toBe(size);
-    expect(bounds.height).toBe(size);
+    expect(bounds.width).toBe(player.width);
+    expect(bounds.height).toBe(height);
     expect(bounds.x + bounds.width / 2).toBe(player.x + player.width / 2);
+    expect(bounds.y).toBe(player.y);
     expect(bounds.y + bounds.height).toBe(player.y + player.height);
   });
 });
@@ -44,16 +45,16 @@ describe('visible contact geometry', () => {
   it('keeps walking contact clear until the explorer and pebblit silhouettes meet', () => {
     const player = { x: 100, y: 450, width: 40, height: 50, powerUp: 'small' };
     const body = playerHurtbox(player);
-    const separate = creatureHurtbox({ type: 'pebblit', x: 132, y: 460, width: 40, height: 40 });
-    const touching = creatureHurtbox({ type: 'pebblit', x: 131, y: 460, width: 40, height: 40 });
+    const separate = creatureHurtbox({ type: 'pebblit', x: 134, y: 460, width: 40, height: 40 });
+    const touching = creatureHurtbox({ type: 'pebblit', x: 133, y: 460, width: 40, height: 40 });
 
-    expect(body.x).toBeCloseTo(105.15);
-    expect(body.y).toBeCloseTo(470.3);
-    expect(body.width).toBeCloseTo(29.7);
-    expect(body.height).toBeCloseTo(29.7);
+    expect(body.x).toBeCloseTo(103.077);
+    expect(body.y).toBeCloseTo(457.692);
+    expect(body.width).toBeCloseTo(33.846);
+    expect(body.height).toBeCloseTo(36.154);
     expect(body.x + body.width).toBeLessThanOrEqual(separate.x);
     expect(body.x + body.width).toBeGreaterThan(touching.x);
-    expect(body.y + body.height).toBeCloseTo(500);
+    expect(body.y + body.height).toBeCloseTo(493.846);
   });
 
   it('follows the visible creature shapes and their current state', () => {

@@ -1,3 +1,61 @@
+.game-viewport {
+  height: 100vh;
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  padding: clamp(4px, 1.5vmin, 16px);
+}
+
+.game-shell {
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.game-header { flex: none; }
+
+.game-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 600px;
+}
+
+.game-canvas {
+  height: 100%;
+  width: auto;
+  min-width: 100%;
+  max-width: none;
+}
+
+.start-screen {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  justify-items: center;
+  padding: clamp(8px, 2.5vh, 24px) 10px 10px;
+}
+
+.start-title { align-self: start; }
+.start-menu { min-height: 0; width: 100%; }
+.start-instructions { align-self: end; width: 100%; }
+.start-identity { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: min(100%, 330px); }
+.start-identity label { display: block; font-size: 11px; }
+.start-identity input, .start-identity select { display: block; width: 100%; min-width: 0; height: 30px; }
+
+@media (max-height: 700px) {
+  .start-title { line-height: 1.1; }
+  .start-menu .start-actions { margin-bottom: 8px; }
+  .start-menu .start-actions:last-child { margin-bottom: 0; }
+  .start-menu .start-actions button { padding-top: 4px; padding-bottom: 4px; }
+  .start-menu > button { margin-bottom: 4px; }
+  .start-menu > .start-actions:last-child { padding: 5px; }
+  .start-menu > .start-actions:last-child > div { margin-bottom: 4px; }
+  .start-instructions { font-size: 10px; }
+}
+
 .touch-controls {
   display: none;
 }
@@ -6,9 +64,82 @@
   .touch-controls {
     display: flex;
     touch-action: none;
+    flex: none;
+    min-height: clamp(112px, 20dvh, 182px);
+    padding: 14px clamp(8px, 2vw, 24px) 8px;
   }
 
   .touch-controls button {
     touch-action: none;
   }
+
+  .direction-pad {
+    width: clamp(96px, 17dvh, 132px);
+    height: clamp(96px, 17dvh, 132px);
+  }
+
+  .pad-key {
+    width: 32%;
+    height: 32%;
+  }
+
+  .jump-buttons { gap: clamp(20px, 5vw, 28px); }
+
+  .jump-key {
+    width: clamp(48px, 7dvh, 60px);
+    height: clamp(48px, 7dvh, 60px);
+  }
+}
+
+@media (pointer: coarse) and (min-width: 600px) {
+  .touch-controls { min-height: clamp(170px, 23dvh, 240px); }
+  .direction-pad { width: clamp(144px, 18dvh, 184px); height: clamp(144px, 18dvh, 184px); }
+  .jump-key { width: clamp(72px, 9dvh, 92px); height: clamp(72px, 9dvh, 92px); font-size: 1.5rem; }
+  .jump-buttons { gap: 28px; }
+}
+
+@media (max-height: 650px) {
+  .game-header { padding-top: 4px; padding-bottom: 4px; }
+  .game-header > div:first-child { gap: 8px; }
+  .game-header > div:first-child span { font-size: 9px; }
+  .game-header > div:first-child div div { font-size: 14px; }
+  .touch-controls { min-height: 108px; padding-top: 5px; }
+  .direction-pad { width: 96px; height: 96px; }
+}
+
+@media (max-width: 599px) {
+  .start-screen .orbit-planet { width: 90px; right: -15px; top: 20px; opacity: .7; }
+  .game-header { flex-wrap: nowrap; padding: 6px 4px; gap: 2px; }
+  .game-header > div:first-child { flex-wrap: nowrap; gap: clamp(3px, 1vw, 7px); }
+  .game-header > div:first-child span { font-size: 8px; }
+  .game-header > div:first-child div div { font-size: clamp(11px, 3.4vw, 14px); }
+  .game-header > div:last-child { gap: 3px; }
+  .game-header > div:last-child button { width: 30px; height: 30px; }
+}
+
+@media (max-height: 500px) {
+  .game-header { padding-top: 2px; padding-bottom: 2px; }
+  .game-header > div:first-child span { font-size: 8px; }
+  .game-header > div:first-child div div { font-size: 12px; }
+  .game-header > div:last-child button { width: 28px; height: 28px; }
+  .touch-controls { min-height: 82px; padding: 4px 8px; }
+  .direction-pad { width: 72px; height: 72px; }
+  .jump-key { width: 44px; height: 44px; }
+  .start-screen { padding-top: 5px; padding-bottom: 4px; }
+  .start-title > div:first-child { font-size: 12px; }
+  .start-title > div:nth-child(2) { font-size: 22px; }
+  .start-title > div:last-child { font-size: 10px; margin-top: 0; }
+  .start-menu .start-actions { margin-bottom: 3px; }
+  .start-menu .start-actions button { padding-top: 2px; padding-bottom: 2px; font-size: 12px; }
+  .start-instructions { font-size: 9px; line-height: 1.1; }
+  .start-identity label { font-size: 9px; }
+  .start-identity input, .start-identity select { height: 24px; }
+}
+
+@media (max-height: 500px) and (min-width: 600px) {
+  .start-screen { grid-template-columns: 45% 55%; grid-template-rows: minmax(0, 1fr) auto; }
+  .start-screen .orbit-planet { opacity: .2; right: 0; }
+  .start-title { grid-column: 1; grid-row: 1; align-self: center; }
+  .start-menu { grid-column: 2; grid-row: 1; zoom: .7; }
+  .start-instructions { grid-column: 1 / -1; grid-row: 2; }
 }
