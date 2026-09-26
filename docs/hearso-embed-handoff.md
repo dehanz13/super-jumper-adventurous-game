@@ -1,6 +1,6 @@
-# Hearso account and embedded-game handoff (design draft)
+# Hearso account and embedded-game handoff (local game-side contract)
 
-This is a proposed contract, not an implemented or deployed account flow. Guest ranked play already has a separate game-owned run API. A standalone visitor must still be able to play as a guest without contacting Hearso.
+The Nova run API now verifies the proposed ticket and consumes it atomically with a new account run when configured with a signing secret. The Hearso issuer, frame message handoff, runtime secret loading, and deployment are still pending. Without the secret, the account start route returns `501`; standalone guest play remains available without Hearso.
 
 ## Verified Hearso seams
 
@@ -21,11 +21,11 @@ These source seams do not prove a deployed Hearso route or a production ticket i
 4. The frame sends `{ launchTicket }` to `POST /v1/runs`. The game-owned Lambda verifies signature, audience, lifetime, and identity shape with a dedicated runtime secret. A DynamoDB transaction consumes `TICKET#<jti>` and creates the active run together. A duplicate ticket cannot issue a second run.
 5. The existing finish verifier chooses weekly plus all-time boards from the stored `account` player class. It does not trust a browser field to choose account status, score, country, or board selection.
 
-The proposed ticket should accept the current and previous signing keys during rotation. The issuer and verifier need shared byte-level test vectors, including wrong audience, expired/not-yet-valid, altered payload, rotated key, and duplicate `jti`. The run API should answer invalid tickets with a safe 401 and never echo claims or signatures. A failed DynamoDB transaction must not consume a ticket without issuing the run.
+The ticket wire format is `v1.<payload_b64url>.<signature_b64url>`. The compact JSON payload has keys in this order: `v`, `jti`, `sub`, `name`, `country`, `aud`, `iat`, `exp`. `v` is `1`; `aud` is `nova-orbit-jump`; `iat` and `exp` are Unix milliseconds exactly 30 seconds apart. The signature is base64url HMAC-SHA256 over `v1.<payload_b64url>` using a **Nova-only** secret of at least 32 UTF-8 bytes. The verifier accepts current and previous secrets during rotation and allows five seconds of clock skew. The issuer must mint a unique 16–40 character `jti` and get `sub`, `name`, and `country` from a verified Hearso account/profile. The API answers invalid or reused tickets with a safe 401 and never echoes claims or signatures. The game-side implementation and DynamoDB Local tests cover atomic consumption; the Hearso issuer must later share a fixed signed vector with this verifier.
 
-## Decisions before implementation
+## Remaining Hearso integration decisions
 
 - Confirm Nova's Hearso Library slug and standalone game origin, then keep the leaderboard `game-id` distinct from Trivia.
 - Decide how an account holder confirms the public country when a Hearso profile may contain a default `US` value.
 - Decide whether the embedded page should offer guest play while a Hearso account session exists. The game must not silently downgrade an account run after a ticket failure.
-- Reconnect Linear and check the Hearso release plan before editing `hearso-web`; its branch and review gates apply there independently of this game repository.
+- Wait for Hearso v1.0.0-beta.9 before changing `hearso-web`; its branch and review gates apply there independently of this game repository.

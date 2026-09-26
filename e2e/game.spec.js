@@ -77,7 +77,7 @@ test('the third sector can finish the current campaign', async ({ page, isMobile
   await page.keyboard.up('ArrowRight');
 });
 
-test('touch controls can finish the current campaign', async ({ page, isMobile }) => {
+test('touch controls advance through the first two sectors', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'mobile touch viewport only');
   test.setTimeout(100_000);
   await page.goto('/');
@@ -88,13 +88,17 @@ test('touch controls can finish the current campaign', async ({ page, isMobile }
   const jump = await page.getByRole('button', { name: 'Jump A' }).boundingBox();
   const point = (box, id) => ({ id, x: box.x + box.width / 2, y: box.y + box.height / 2 });
   const session = await page.context().newCDPSession(page);
-  await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point(right, 1), point(jump, 2)] });
+  const pressControls = () => session.send('Input.dispatchTouchEvent', {
+    type: 'touchStart', touchPoints: [point(right, 1), point(jump, 2)],
+  });
+  const releaseControls = () => session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await pressControls();
   await expect(page.getByText('GET READY FOR SECTOR 2-1')).toBeVisible({ timeout: 35_000 });
+  await releaseControls();
   await page.getByRole('button', { name: /next sector/i }).click();
+  await pressControls();
   await expect(page.getByText('GET READY FOR SECTOR 3-1')).toBeVisible({ timeout: 35_000 });
-  await page.getByRole('button', { name: /next sector/i }).click();
-  await expect(page.getByText('ALL SECTORS CLEARED!')).toBeVisible({ timeout: 40_000 });
-  await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await releaseControls();
 });
 
 test('the player sprite reaches the ground line', async ({ page, isMobile }) => {

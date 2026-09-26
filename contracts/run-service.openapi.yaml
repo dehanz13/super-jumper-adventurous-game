@@ -184,7 +184,12 @@ components:
       properties:
         launchTicket:
           type: string
-          description: Signed, one-time Hearso identity handoff; issuer contract pending.
+          maxLength: 2048
+          description: >-
+            Signed, one-time Hearso identity handoff. The Nova verifier and
+            atomic consumption are local; Hearso issuer and runtime secret
+            configuration are pending. Format: v1.payload_b64url.sig_b64url.
+            Never put it in a URL or analytics.
         guestProfile:
           $ref: '#/components/schemas/GuestProfile'
         guestCredential:
