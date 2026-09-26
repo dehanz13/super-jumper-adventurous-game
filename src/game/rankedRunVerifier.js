@@ -1,9 +1,5 @@
-import { STEP_MS } from './fixedStep';
 import { isSubmissionCandidate } from './inputTranscript';
-import { LEVEL_SET_VERSION } from './levels';
-import { GAME_RULES_VERSION } from './rulesVersion';
-import { SCORING_VERSION } from './scoring';
-import { replayCampaign } from './simulation';
+import { currentVerificationProfile, resolveVerificationProfile } from './verificationProfiles';
 
 const TIMING_GRACE_MS = 2000;
 const MAX_RUN_AGE_MS = 35 * 60 * 1000;
@@ -17,21 +13,18 @@ export class RunVerificationError extends Error {
 }
 
 export function currentRunVersions() {
-  return {
-    levelSetVersion: LEVEL_SET_VERSION,
-    rulesVersion: GAME_RULES_VERSION,
-    scoringVersion: SCORING_VERSION,
-  };
+  return { ...currentVerificationProfile().versions };
 }
 
-// A future Lambda calls this only after authenticating the run token and reading
-// the server-owned run record. No client field can choose identity or boards.
+// Called after authenticating the run token and reading the server-owned run.
+// Only that record selects a registered replay profile; the transcript must match it.
 export function verifyRankedCampaign({ run, transcript, claimedScore, nowMs }) {
   if (run?.status !== 'active') throw new RunVerificationError('run_not_active');
   if (!isSubmissionCandidate(transcript)) throw new RunVerificationError('ineligible_transcript');
-  const versions = currentRunVersions();
-  for (const key of Object.keys(versions)) {
-    if (run.versions?.[key] !== versions[key] || transcript[key] !== run.versions[key]) {
+  const profile = resolveVerificationProfile(run.versions);
+  if (!profile) throw new RunVerificationError('version_mismatch');
+  for (const key of Object.keys(profile.versions)) {
+    if (transcript[key] !== run.versions[key]) {
       throw new RunVerificationError('version_mismatch');
     }
   }
@@ -41,13 +34,13 @@ export function verifyRankedCampaign({ run, transcript, claimedScore, nowMs }) {
     || nowMs - run.startedAtMs > MAX_RUN_AGE_MS) {
     throw new RunVerificationError('run_expired');
   }
-  if (nowMs - run.startedAtMs + TIMING_GRACE_MS < transcript.steps * STEP_MS) {
+  if (nowMs - run.startedAtMs + TIMING_GRACE_MS < transcript.steps * profile.stepMs) {
     throw new RunVerificationError('implausible_duration');
   }
 
   let replay;
   try {
-    replay = replayCampaign(transcript);
+    replay = profile.replayCampaign(transcript);
   } catch {
     throw new RunVerificationError('invalid_replay');
   }
