@@ -23,6 +23,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      - run: npm run infra:synth
       - run: npm run test:coverage
       - run: npm run test:dynamo-local
         env:
