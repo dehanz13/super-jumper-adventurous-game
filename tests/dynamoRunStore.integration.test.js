@@ -260,6 +260,27 @@ describe.runIf(Boolean(endpoint))('DynamoDB Local run store', () => {
     expect(await store.getOutbox(start.runId)).toMatchObject({ outboxStatus: 'pending' });
   });
 
+  it('hands a verified audit to the Supabase relay without claiming Kafka delivery', async () => {
+    const { start, args } = await newGuestRun();
+    await finishRun(args);
+    const result = await processAuditBatch({
+      ...store, deliveryMode: 'history_relay', publishKafka: undefined,
+      listDueAudit: async () => [{ runId: start.runId }], now: () => nowMs + 1000,
+      writeHistory: async ({ event }) => { expect(event.eventId).toBe(start.runId); },
+    });
+    expect(result).toMatchObject({ historyHandedOff: 1, delivered: 0 });
+    expect(await store.getVerifiedAudit(start.runId)).toMatchObject({
+      outboxStatus: 'audit_history_handed_off', historyDeliveredAtMs: nowMs + 1000,
+      historyHandedOffAtMs: nowMs + 1000,
+    });
+    expect(await store.getVerifiedAudit(start.runId)).not.toHaveProperty('kafkaDeliveredAtMs');
+    expect(await store.markAuditHistoryHandoff({
+      runId: start.runId, claimToken: 'stale-lease', nowMs: nowMs + 2000,
+    })).toBe(false);
+    expect(await store.listDueAudit({ nowMs: nowMs + 2000, limit: 25 }))
+      .not.toContainEqual(expect.objectContaining({ runId: start.runId }));
+  });
+
   it('rejects a stale audit lease and requires both destinations before completion', async () => {
     const { start, args } = await newGuestRun();
     await finishRun(args);

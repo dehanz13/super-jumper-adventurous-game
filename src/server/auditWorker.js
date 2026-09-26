@@ -8,15 +8,20 @@ function retryDelay(attemptCount) {
 // repeated when the process dies before its DynamoDB acknowledgement is saved.
 export async function processAuditBatch({
   listDueAudit, claimAudit, markAuditSinkDelivered, rescheduleAudit, markAuditComplete,
-  writeHistory, publishKafka, now = Date.now, limit = MAX_BATCH,
+  markAuditHistoryHandoff, writeHistory, publishKafka, deliveryMode = 'direct_kafka',
+  now = Date.now, limit = MAX_BATCH,
 }) {
-  if ([listDueAudit, claimAudit, markAuditSinkDelivered, rescheduleAudit, markAuditComplete,
-    writeHistory, publishKafka, now].some(callback => typeof callback !== 'function')
+  if (!['direct_kafka', 'history_relay'].includes(deliveryMode)
+    || [listDueAudit, claimAudit, markAuditSinkDelivered, rescheduleAudit,
+      writeHistory, now].some(callback => typeof callback !== 'function')
+    || (deliveryMode === 'direct_kafka'
+      && (typeof publishKafka !== 'function' || typeof markAuditComplete !== 'function'))
+    || (deliveryMode === 'history_relay' && typeof markAuditHistoryHandoff !== 'function')
     || !Number.isSafeInteger(limit) || limit < 1 || limit > MAX_BATCH) {
     throw new TypeError('valid audit worker dependencies are required');
   }
   const items = await listDueAudit({ nowMs: now(), limit });
-  const counts = { examined: 0, delivered: 0, retried: 0, contended: 0 };
+  const counts = { examined: 0, delivered: 0, historyHandedOff: 0, retried: 0, contended: 0 };
   for (const candidate of items) {
     counts.examined++;
     const claim = await claimAudit({ runId: candidate.runId, nowMs: now() });
@@ -37,7 +42,7 @@ export async function processAuditBatch({
         if (!saved) { counts.contended++; continue; }
       }
     }
-    if (!failedSink && claim.kafkaDeliveredAtMs === undefined) {
+    if (!failedSink && deliveryMode === 'direct_kafka' && claim.kafkaDeliveredAtMs === undefined) {
       try { await publishKafka(claim.event); }
       catch { failedSink = 'kafka_unavailable'; }
       if (!failedSink) {
@@ -55,8 +60,9 @@ export async function processAuditBatch({
       counts[changed ? 'retried' : 'contended']++;
       continue;
     }
-    const changed = await markAuditComplete({ runId: claim.runId, claimToken: claim.claimToken, nowMs: now() });
-    counts[changed ? 'delivered' : 'contended']++;
+    const complete = deliveryMode === 'history_relay' ? markAuditHistoryHandoff : markAuditComplete;
+    const changed = await complete({ runId: claim.runId, claimToken: claim.claimToken, nowMs: now() });
+    counts[changed ? (deliveryMode === 'history_relay' ? 'historyHandedOff' : 'delivered') : 'contended']++;
   }
   return counts;
 }
