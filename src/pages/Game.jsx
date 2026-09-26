@@ -13,9 +13,11 @@ import { takeFixedSteps } from '@/game/fixedStep';
 import { createScoreLedger } from '@/game/scoreLedger';
 import { advanceSimulation } from '@/game/simulation';
 import { createLocalRunCompletion } from '@/game/runCompletion';
+import { useRankedRun } from '@/game/useRankedRun';
 import { createEmptyWorldState, createInitialLevelState, createPlayerState } from '@/game/worldState';
 
-export default function Game({ onRunComplete = null }) {
+export default function Game({ onRunComplete = null, runClient = null, guestStore = null }) {
+  const ranked = useRankedRun(runClient, guestStore);
   const canvasRef = useRef(null);
   const gameLoopRef = useRef(null);
   const keysRef = useRef({});
@@ -192,7 +194,9 @@ export default function Game({ onRunComplete = null }) {
       if (result.transition.state === 'gameover') sealInputTranscript(inputTranscriptRef.current, 'gameover');
       setGameState(result.transition.state);
       if (result.transition.state === 'win' || result.transition.state === 'gameover') {
-        onRunComplete?.(createLocalRunCompletion(inputTranscriptRef.current, scoreLedgerRef.current));
+        const completion = createLocalRunCompletion(inputTranscriptRef.current, scoreLedgerRef.current);
+        onRunComplete?.(completion);
+        void ranked.complete(completion);
       }
     }
 
@@ -235,7 +239,7 @@ export default function Game({ onRunComplete = null }) {
     drawExplorer(ctx, player, world.offset);
 
     gameLoopRef.current = requestAnimationFrame(gameLoop);
-  }, [gameState, level, selectedTool, showGrid, onRunComplete]);
+  }, [gameState, level, selectedTool, showGrid, onRunComplete, ranked.complete]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -407,7 +411,7 @@ export default function Game({ onRunComplete = null }) {
     setShards(0);
   };
 
-  const startGame = () => {
+  const beginGame = () => {
     soundController.init();
     soundController.playSelect();
     soundController.playBGM(1);
@@ -417,6 +421,16 @@ export default function Game({ onRunComplete = null }) {
     setLives(3);
     livesRef.current = 3;
     setGameState('playing');
+  };
+
+  const startGame = profile => {
+    if (!runClient) { beginGame(); return; }
+    void ranked.start(profile).then(started => { if (started) beginGame(); });
+  };
+
+  const startLocalGame = () => {
+    ranked.startLocal();
+    beginGame();
   };
 
   const nextLevel = () => {
@@ -557,11 +571,13 @@ export default function Game({ onRunComplete = null }) {
 
           {/* Overlays */}
           {gameState === 'intro' && <IntroScreen introPhase={introPhase} onSkip={() => { setGameState('start'); setIntroPhase(0); }} />}
-          {gameState === 'start' && <StartScreen onStart={startGame} onEnterEditor={enterEditor} />}
+          {gameState === 'start' && <StartScreen onStart={startGame} onEnterEditor={enterEditor}
+            rankedEnabled={Boolean(runClient)} returningGuest={ranked.returningGuest}
+            starting={ranked.starting} startError={ranked.startError} onLocalStart={startLocalGame} />}
           {gameState === 'paused' && <div className="absolute inset-0 bg-[#10172E] flex flex-col items-center justify-center" style={{fontFamily:'monospace'}}><div className="text-white text-4xl font-bold mb-8" style={{textShadow:'3px 3px 0 #6756B8'}}>PAUSED</div><button onClick={togglePause} className="bg-[#6756B8] hover:bg-[#8878D7] text-white font-bold px-8 py-4 border-4 border-black text-xl transition-colors" style={{textShadow:'1px 1px 0 #000'}}>▶ CONTINUE</button></div>}
-          {gameState === 'gameover' && <GameOverScreen score={score} level={level} onRestart={startGame} />}
+          {gameState === 'gameover' && <GameOverScreen score={score} level={level} onRestart={runClient ? () => setGameState('start') : startGame} />}
           {gameState === 'levelcomplete' && <div className="absolute inset-0 bg-[#10172E] flex flex-col items-center justify-center" style={{fontFamily:'monospace'}}><div className="text-[#F4DB70] text-4xl font-bold mb-4" style={{textShadow:'3px 3px 0 #6756B8'}}>COURSE CLEAR!</div><div className="text-white text-xl mb-2">SECTOR {level - 1}-1 COMPLETED</div><div className="text-[#F4DB70] text-2xl mb-2">SCORE: {String(score).padStart(6,'0')}</div><div className="text-white text-lg mb-8">GET READY FOR SECTOR {level}-1</div><button onClick={nextLevel} className="bg-[#137F87] hover:bg-[#28D9CF] text-white font-bold px-8 py-4 border-4 border-black text-xl transition-colors" style={{textShadow:'1px 1px 0 #000'}}>▶ NEXT SECTOR</button></div>}
-          {gameState === 'win' && <WinScreen score={score} onRestart={startGame} />}
+          {gameState === 'win' && <WinScreen score={score} onRestart={runClient ? () => setGameState('start') : startGame} rankState={ranked.rankState} />}
         </div>
         {/* Mobile Controls */}
         <div className="touch-controls mt-4 justify-between items-center gap-2 sm:px-4" style={{fontFamily:'monospace'}}>

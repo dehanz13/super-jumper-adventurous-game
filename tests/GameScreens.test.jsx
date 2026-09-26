@@ -36,4 +36,24 @@ describe('game screens', () => {
     fireEvent.click(screen.getByRole('button', { name: /play again/i }));
     expect(onRestart).toHaveBeenCalledOnce();
   });
+
+  it('collects an assigned guest profile before a ranked start', () => {
+    const onStart = vi.fn();
+    render(<StartScreen onStart={onStart} onEnterEditor={vi.fn()} rankedEnabled />);
+    const start = screen.getByRole('button', { name: /press start/i });
+    expect(start).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Public name'), { target: { value: 'Nova' } });
+    fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'US' } });
+    expect(start).toBeEnabled();
+    fireEvent.click(start);
+    expect(onStart).toHaveBeenCalledWith({ displayName: 'Nova', country: 'US' });
+  });
+
+  it('shows only confirmed public rank as a rank', () => {
+    const { rerender } = render(<WinScreen score={450} onRestart={vi.fn()} rankState={{ status: 'pending_write' }} />);
+    expect(screen.getByRole('status')).toHaveTextContent('Publishing');
+    expect(screen.queryByText(/rank #/i)).not.toBeInTheDocument();
+    rerender(<WinScreen score={450} onRestart={vi.fn()} rankState={{ status: 'ranked', ranks: [{ board: 'weekly', rank: 5 }] }} />);
+    expect(screen.getByRole('status')).toHaveTextContent('Weekly rank #5');
+  });
 });

@@ -1,6 +1,9 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Hammer } from 'lucide-react';
 import { gsap, useGSAP } from '@/lib/animation';
+import { ASSIGNED_COUNTRY_CODES } from '@/shared/assignedCountries';
+
+const countryNames = new Intl.DisplayNames(['en'], { type: 'region' });
 
 export function GameOverScreen({ score, level, onRestart }) {
   return (
@@ -21,7 +24,7 @@ export function GameOverScreen({ score, level, onRestart }) {
   );
 }
 
-export function WinScreen({ score, onRestart }) {
+export function WinScreen({ score, onRestart, rankState = null }) {
   return (
     <div className="absolute inset-0 bg-[#10172E] flex flex-col items-center justify-center" style={{ fontFamily: 'monospace' }}>
       <div className="text-[#F4DB70] text-3xl font-bold mb-2" style={{ textShadow: '3px 3px 0 #6756B8' }}>
@@ -33,6 +36,16 @@ export function WinScreen({ score, onRestart }) {
       <div className="text-white text-xl mb-2">ALL SECTORS CLEARED!</div>
       <div className="text-[#F4DB70] text-3xl mb-1">FINAL SCORE</div>
       <div className="text-white text-4xl mb-2">{String(score).padStart(6, '0')}</div>
+      {rankState && <div role="status" className="text-white text-sm text-center px-4 mb-2">
+        {rankState.status === 'verifying' && 'Verifying your campaign…'}
+        {rankState.status === 'pending_write' && 'Score verified. Publishing your weekly rank…'}
+        {rankState.status === 'ranked' && (rankState.ranks?.find(rank => rank.board === 'weekly')
+          ? `Weekly rank #${rankState.ranks.find(rank => rank.board === 'weekly').rank}`
+          : 'Score published to the weekly board.')}
+        {rankState.status === 'rejected' && 'This run could not be verified for ranking.'}
+        {rankState.status === 'delivery_failed' && 'Score verified, but leaderboard delivery failed.'}
+        {rankState.status === 'unavailable' && 'Ranking is unavailable. Your local score is still shown.'}
+      </div>}
       <button
         onClick={onRestart}
         className="mt-6 bg-[#28D9CF] hover:bg-[#E7FAFF] text-[#17243F] font-bold px-8 py-4 border-4 border-black text-xl transition-colors"
@@ -43,8 +56,10 @@ export function WinScreen({ score, onRestart }) {
   );
 }
 
-export function StartScreen({ onStart, onEnterEditor }) {
+export function StartScreen({ onStart, onEnterEditor, rankedEnabled = false, returningGuest = false, starting = false, startError = '', onLocalStart = null }) {
   const rootRef = useRef(null);
+  const [displayName, setDisplayName] = useState('');
+  const [country, setCountry] = useState('');
 
   useGSAP(() => {
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) return;
@@ -64,12 +79,26 @@ export function StartScreen({ onStart, onEnterEditor }) {
         <div className="text-white text-xs sm:text-lg sm:mt-4" style={{ textShadow: '2px 2px 0 #000' }}>A COSMIC ADVENTURE</div>
       </div>
 
-      <button className="start-actions text-white text-base sm:text-xl font-bold mb-2 sm:mb-4 cursor-pointer hover:text-[#F4DB70] transition-colors motion-safe:animate-pulse relative z-10"
-        onClick={() => onStart()}
+      {rankedEnabled && !returningGuest && <div className="start-actions relative z-10 flex flex-col gap-2 w-56 mb-3 text-white text-sm">
+        <label htmlFor="guest-name">Public name</label>
+        <input id="guest-name" maxLength={32} autoComplete="nickname" value={displayName} onChange={event => setDisplayName(event.target.value)} className="bg-[#10172E] border border-[#28D9CF] px-2 py-1" />
+        <label htmlFor="guest-country">Country</label>
+        <select id="guest-country" value={country} onChange={event => setCountry(event.target.value)} className="bg-[#10172E] border border-[#28D9CF] px-2 py-1">
+          <option value="">Choose a country</option>
+          {ASSIGNED_COUNTRY_CODES.map(code => <option key={code} value={code}>{countryNames.of(code)} ({code})</option>)}
+        </select>
+      </div>}
+      {returningGuest && rankedEnabled && <p className="start-actions text-white text-sm mb-2 relative z-10">Continue your weekly guest rank</p>}
+      <button className="start-actions text-white text-base sm:text-xl font-bold mb-2 sm:mb-4 cursor-pointer hover:text-[#F4DB70] transition-colors motion-safe:animate-pulse relative z-10 disabled:opacity-50"
+        onClick={() => rankedEnabled && !returningGuest
+          ? onStart({ displayName: displayName.trim(), country }) : onStart()}
+        disabled={starting || (rankedEnabled && !returningGuest && (!displayName.trim() || !country))}
         style={{ textShadow: '2px 2px 0 #000' }}
       >
-        ▶ PRESS START ◀
+        {starting ? 'STARTING…' : '▶ PRESS START ◀'}
       </button>
+      {startError && <div role="alert" className="relative z-10 text-[#F38173] text-sm mb-2 text-center px-4">{startError}</div>}
+      {rankedEnabled && onLocalStart && <button onClick={onLocalStart} className="relative z-10 text-white text-sm underline mb-2">Play locally without ranking</button>}
 
       <div className="start-actions bg-[#10172E]/80 border border-[#28D9CF]/50 p-2 sm:p-4 rounded-lg mb-2 sm:mb-4 text-center relative z-10">
         <div className="text-[#F4DB70] mb-2">STARTS IN SECTOR 1</div>
