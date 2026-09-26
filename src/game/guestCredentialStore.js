@@ -1,4 +1,6 @@
-const KEY = 'nova-orbit-jump.guest-credential.v1';
+import { SOLO_GAME_ID } from '../shared/soloGameIdentity';
+
+const KEY = `${SOLO_GAME_ID}.guest-credential.v1`;
 const CREDENTIAL = /^[A-Za-z0-9_-]{32,128}$/;
 
 // Keep only the week-scoped guest credential. Per-run bearer tokens stay in memory.
