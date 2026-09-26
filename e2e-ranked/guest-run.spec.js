@@ -36,6 +36,14 @@ test('a guest starts a server run and sees a rank only after publishing', async 
     expect(finished).toBe(true);
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ runId, status: 'ranked', score: verifiedScore, ranks: [{ board: 'weekly', rank: 5 }] }) });
   });
+  await page.route('**/v1/leaderboards?*', async route => {
+    const url = new URL(route.request().url());
+    expect(url.searchParams.get('game-id')).toBe('nova-orbit-jump');
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+      gameId: 'nova-orbit-jump', variant: 'alltopics', period: url.searchParams.get('period'), playerCount: 1,
+      entries: [{ rank: 5, playerId: 'hidden', displayName: 'Nova', country: 'US', score: verifiedScore, lastPlayedAt: '2026-09-25T12:00:00Z' }],
+    }) });
+  });
 
   await page.goto('/');
   await page.getByText(/skip/i).click();
@@ -53,6 +61,10 @@ test('a guest starts a server run and sees a rank only after publishing', async 
   await expect(page.getByText('YOU WIN!')).toBeVisible({ timeout: 35_000 });
   await expect(page.getByRole('status')).toContainText('Weekly rank #5', { timeout: 10_000 });
   expect(finished).toBe(true);
+  await page.getByRole('button', { name: 'View solo ranks' }).click();
+  await expect(page.getByRole('region', { name: 'Nova solo leaderboard' }).getByText('Nova', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Back' }).click();
+  await expect(page.getByText('YOU WIN!')).toBeVisible();
   await page.getByRole('button', { name: /play again/i }).click();
   await expect(page.getByText('Continue your weekly guest rank')).toBeVisible();
   await page.getByRole('button', { name: /press start/i }).click();
