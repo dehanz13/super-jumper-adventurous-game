@@ -1,4 +1,6 @@
-const GAME_ID = 'nova-orbit-jump';
+import { SOLO_GAME_ID } from '../shared/soloGameIdentity';
+
+const GAME_ID = SOLO_GAME_ID;
 const VARIANT = 'alltopics';
 const PAGE_SIZE = 10;
 

@@ -14,6 +14,7 @@ describe('guest credential storage', () => {
     };
     const store = createGuestCredentialStore(backend);
     expect(store.save(credential, expiresAt)).toBe(true);
+    expect(Array.from(storage.keys())).toEqual(['nova-orbit-jump.guest-credential.v1']);
     expect(store.read(Date.parse(expiresAt) - 1)).toBe(credential);
     expect(Array.from(storage.values())[0]).not.toContain('runToken');
     expect(store.read(Date.parse(expiresAt))).toBeNull();

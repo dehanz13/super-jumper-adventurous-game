@@ -15,6 +15,7 @@ import {
   aws_secretsmanager as secretsmanager,
 } from 'aws-cdk-lib';
 import type { Construct } from 'constructs';
+import { SOLO_GAME_ID } from '../src/shared/soloGameIdentity.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -71,7 +72,7 @@ export class RunServiceStack extends Stack {
       reservedConcurrentExecutions: 5,
       environment: {
         RUN_TABLE_NAME: table.tableName,
-        SOLO_GAME_ID: 'nova-orbit-jump',
+        SOLO_GAME_ID,
         GAME_ALLOWED_ORIGINS: allowedOrigins.valueAsString,
       },
     });
