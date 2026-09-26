@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { RotateCcw, Play, Pause, Volume2, VolumeX, Grid, Save, Plus, Eraser } from "lucide-react";
 import { soundController } from "@/components/SoundController";
 import { GameOverScreen, WinScreen, StartScreen } from '@/components/GameScreens';
+import { SoloBoardScreen } from '@/components/SoloBoardScreen';
 import IntroScreen from '@/components/IntroScreen';
 import { drawCreature, drawExplorer } from '@/game/characterArt';
 import { drawBeacon, drawPickup, drawSpaceBackdrop, drawStarShard, drawTerrain } from '@/game/worldArt';
@@ -16,7 +17,7 @@ import { createLocalRunCompletion } from '@/game/runCompletion';
 import { useRankedRun } from '@/game/useRankedRun';
 import { createEmptyWorldState, createInitialLevelState, createPlayerState } from '@/game/worldState';
 
-export default function Game({ onRunComplete = null, runClient = null, guestStore = null }) {
+export default function Game({ onRunComplete = null, runClient = null, boardClient = null, guestStore = null }) {
   const ranked = useRankedRun(runClient, guestStore);
   const canvasRef = useRef(null);
   const gameLoopRef = useRef(null);
@@ -31,6 +32,7 @@ export default function Game({ onRunComplete = null, runClient = null, guestStor
   const inputTranscriptRef = useRef(createInputTranscript());
 
   const [gameState, setGameState] = useState('intro'); // intro, start, playing, paused, gameover, win
+  const [boardReturnState, setBoardReturnState] = useState('start');
   const [introPhase, setIntroPhase] = useState(0);
   const [score, setScore] = useState(0);
   const [shards, setShards] = useState(0);
@@ -433,6 +435,11 @@ export default function Game({ onRunComplete = null, runClient = null, guestStor
     beginGame();
   };
 
+  const openLeaderboard = () => {
+    setBoardReturnState(gameState);
+    setGameState('leaderboard');
+  };
+
   const nextLevel = () => {
     soundController.playSelect();
     soundController.playBGM(level);
@@ -571,13 +578,14 @@ export default function Game({ onRunComplete = null, runClient = null, guestStor
 
           {/* Overlays */}
           {gameState === 'intro' && <IntroScreen introPhase={introPhase} onSkip={() => { setGameState('start'); setIntroPhase(0); }} />}
-          {gameState === 'start' && <StartScreen onStart={startGame} onEnterEditor={enterEditor}
+          {gameState === 'start' && <StartScreen onStart={startGame} onEnterEditor={enterEditor} onLeaderboard={boardClient ? openLeaderboard : null}
             rankedEnabled={Boolean(runClient)} returningGuest={ranked.returningGuest}
             starting={ranked.starting} startError={ranked.startError} onLocalStart={startLocalGame} />}
           {gameState === 'paused' && <div className="absolute inset-0 bg-[#10172E] flex flex-col items-center justify-center" style={{fontFamily:'monospace'}}><div className="text-white text-4xl font-bold mb-8" style={{textShadow:'3px 3px 0 #6756B8'}}>PAUSED</div><button onClick={togglePause} className="bg-[#6756B8] hover:bg-[#8878D7] text-white font-bold px-8 py-4 border-4 border-black text-xl transition-colors" style={{textShadow:'1px 1px 0 #000'}}>▶ CONTINUE</button></div>}
           {gameState === 'gameover' && <GameOverScreen score={score} level={level} onRestart={runClient ? () => setGameState('start') : startGame} />}
           {gameState === 'levelcomplete' && <div className="absolute inset-0 bg-[#10172E] flex flex-col items-center justify-center" style={{fontFamily:'monospace'}}><div className="text-[#F4DB70] text-4xl font-bold mb-4" style={{textShadow:'3px 3px 0 #6756B8'}}>COURSE CLEAR!</div><div className="text-white text-xl mb-2">SECTOR {level - 1}-1 COMPLETED</div><div className="text-[#F4DB70] text-2xl mb-2">SCORE: {String(score).padStart(6,'0')}</div><div className="text-white text-lg mb-8">GET READY FOR SECTOR {level}-1</div><button onClick={nextLevel} className="bg-[#137F87] hover:bg-[#28D9CF] text-white font-bold px-8 py-4 border-4 border-black text-xl transition-colors" style={{textShadow:'1px 1px 0 #000'}}>▶ NEXT SECTOR</button></div>}
-          {gameState === 'win' && <WinScreen score={score} onRestart={runClient ? () => setGameState('start') : startGame} rankState={ranked.rankState} />}
+          {gameState === 'win' && <WinScreen score={score} onRestart={runClient ? () => setGameState('start') : startGame} onLeaderboard={boardClient ? openLeaderboard : null} rankState={ranked.rankState} />}
+          {gameState === 'leaderboard' && boardClient && <SoloBoardScreen getBoard={boardClient} onBack={() => setGameState(boardReturnState)} rankedStatus={ranked.rankState?.status} />}
         </div>
         {/* Mobile Controls */}
         <div className="touch-controls mt-4 justify-between items-center gap-2 sm:px-4" style={{fontFamily:'monospace'}}>

@@ -24,7 +24,7 @@ export function GameOverScreen({ score, level, onRestart }) {
   );
 }
 
-export function WinScreen({ score, onRestart, rankState = null }) {
+export function WinScreen({ score, onRestart, onLeaderboard = null, rankState = null }) {
   return (
     <div className="absolute inset-0 bg-[#10172E] flex flex-col items-center justify-center" style={{ fontFamily: 'monospace' }}>
       <div className="text-[#F4DB70] text-3xl font-bold mb-2" style={{ textShadow: '3px 3px 0 #6756B8' }}>
@@ -46,6 +46,7 @@ export function WinScreen({ score, onRestart, rankState = null }) {
         {rankState.status === 'delivery_failed' && 'Score verified, but leaderboard delivery failed.'}
         {rankState.status === 'unavailable' && 'Ranking is unavailable. Your local score is still shown.'}
       </div>}
+      {onLeaderboard && <button onClick={onLeaderboard} className="text-[#28D9CF] underline px-4 py-2">View solo ranks</button>}
       <button
         onClick={onRestart}
         className="mt-6 bg-[#28D9CF] hover:bg-[#E7FAFF] text-[#17243F] font-bold px-8 py-4 border-4 border-black text-xl transition-colors"
@@ -56,7 +57,7 @@ export function WinScreen({ score, onRestart, rankState = null }) {
   );
 }
 
-export function StartScreen({ onStart, onEnterEditor, rankedEnabled = false, returningGuest = false, starting = false, startError = '', onLocalStart = null }) {
+export function StartScreen({ onStart, onEnterEditor, onLeaderboard = null, rankedEnabled = false, returningGuest = false, starting = false, startError = '', onLocalStart = null }) {
   const rootRef = useRef(null);
   const [displayName, setDisplayName] = useState('');
   const [country, setCountry] = useState('');
@@ -99,6 +100,7 @@ export function StartScreen({ onStart, onEnterEditor, rankedEnabled = false, ret
       </button>
       {startError && <div role="alert" className="relative z-10 text-[#F38173] text-sm mb-2 text-center px-4">{startError}</div>}
       {rankedEnabled && onLocalStart && <button onClick={onLocalStart} className="relative z-10 text-white text-sm underline mb-2">Play locally without ranking</button>}
+      {onLeaderboard && <button onClick={onLeaderboard} className="start-actions relative z-10 text-[#28D9CF] text-sm underline mb-2">View solo ranks</button>}
 
       <div className="start-actions bg-[#10172E]/80 border border-[#28D9CF]/50 p-2 sm:p-4 rounded-lg mb-2 sm:mb-4 text-center relative z-10">
         <div className="text-[#F4DB70] mb-2">STARTS IN SECTOR 1</div>
