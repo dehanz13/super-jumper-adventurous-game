@@ -23,3 +23,5 @@ npm run infra:synth
 ```
 
 `cdk.out` contains the synthesized CloudFormation template and Lambda bundles and is ignored by Git. The synthesis test checks the table schema, schedule, API stage, runtime configuration, and secret grant. It does not prove IAM behavior in an AWS account, networking to the live leaderboard, alarm delivery, or production readiness.
+
+For a local browser-to-server check, run DynamoDB Local and then set `DYNAMODB_LOCAL_ENDPOINT=http://127.0.0.1:18000` for `npm run test:e2e:real-run`. This plays the full campaign in Chromium, passes the captured transcript to the real run handler, verifies the DynamoDB transaction, and drains the outbox with a local leaderboard stub. The test creates and deletes its own table. It does not exercise an AWS stage or the live leaderboard.
