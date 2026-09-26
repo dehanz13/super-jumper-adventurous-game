@@ -99,4 +99,8 @@ test('a browser-played campaign passes real verification and reaches the outbox'
     status: 'ranked', ranks: [{ board: 'weekly', rank: 5 }],
   });
   expect(await store.getOutbox(issuedRunId)).toMatchObject({ outboxStatus: 'delivered' });
+  expect(await store.getVerifiedAudit(issuedRunId)).toMatchObject({
+    outboxStatus: 'audit_pending',
+    event: { eventId: issuedRunId, eventType: 'nova.run.verified', score: expect.any(Number) },
+  });
 });
