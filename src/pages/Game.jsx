@@ -196,8 +196,8 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
         }
 
         // Camera movement with arrow keys in editor
-        if (keysRef.current['ArrowRight']) world.offset += 10;
-        if (keysRef.current['ArrowLeft']) world.offset = Math.max(0, world.offset - 10);
+        if (keysRef.current['ArrowRight'] || keysRef.current['TouchRight']) world.offset += 10;
+        if (keysRef.current['ArrowLeft'] || keysRef.current['TouchLeft']) world.offset = Math.max(0, world.offset - 10);
 
         gameLoopRef.current = requestAnimationFrame(gameLoop);
         return;
@@ -510,7 +510,7 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
   const updatePadDirection = (event) => {
     const rect = event.currentTarget.getBoundingClientRect();
     const direction = directionAtPoint(rect, event.clientX, event.clientY);
-    DIRECTION_KEYS.forEach(key => { keysRef.current[key] = key === direction; });
+    DIRECTION_KEYS.forEach(key => { keysRef.current[`Touch${key.slice(5)}`] = key === direction; });
   };
 
   const handlePadPointerDown = (event) => {
@@ -528,7 +528,7 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
   const handlePadPointerEnd = (event) => {
     if (directionPointerRef.current !== event.pointerId) return;
     directionPointerRef.current = null;
-    DIRECTION_KEYS.forEach(key => { keysRef.current[key] = false; });
+    DIRECTION_KEYS.forEach(key => { keysRef.current[`Touch${key.slice(5)}`] = false; });
   };
 
   const handleJumpPointerDown = (event) => {
