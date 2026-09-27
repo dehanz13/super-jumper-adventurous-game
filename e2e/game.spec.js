@@ -326,3 +326,39 @@ test('dragging across the direction pad reverses movement', async ({ page, isMob
   await expect.poll(playerFootX).toBeLessThan(rightX - 10);
   await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
 });
+
+test('keyboard and touch direction holds survive the other source releasing', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'mobile viewport only');
+  await page.goto('/');
+  await page.getByText(/skip/i).click();
+  await page.getByRole('button', { name: /press start/i }).click();
+
+  const playerFootX = () => page.locator('canvas').evaluate(canvas => {
+    const pixels = canvas.getContext('2d').getImageData(0, 499, 350, 1).data;
+    const positions = [];
+    for (let x = 0; x < 350; x++) {
+      const offset = x * 4;
+      if (pixels[offset] === 46 && pixels[offset + 1] === 64 && pixels[offset + 2] === 90) positions.push(x);
+    }
+    return positions.length ? (positions[0] + positions[positions.length - 1]) / 2 : null;
+  });
+  await expect.poll(playerFootX).not.toBeNull();
+  const right = await page.getByRole('button', { name: 'Move Right' }).boundingBox();
+  const session = await page.context().newCDPSession(page);
+  const touchPoint = { id: 1, x: right.x + right.width / 2, y: right.y + right.height / 2 };
+
+  await page.keyboard.down('ArrowRight');
+  await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [touchPoint] });
+  await expect.poll(playerFootX).toBeGreaterThan(110);
+  await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  const afterTouchRelease = await playerFootX();
+  await expect.poll(playerFootX).toBeGreaterThan(afterTouchRelease + 10);
+  await page.keyboard.up('ArrowRight');
+
+  await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [touchPoint] });
+  await page.keyboard.down('ArrowRight');
+  await page.keyboard.up('ArrowRight');
+  const afterKeyboardRelease = await playerFootX();
+  await expect.poll(playerFootX).toBeGreaterThan(afterKeyboardRelease + 10);
+  await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+});

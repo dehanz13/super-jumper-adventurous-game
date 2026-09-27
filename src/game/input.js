@@ -2,9 +2,9 @@ export const DIRECTION_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'
 
 export function readGameplayInput(keys) {
   return {
-    left: Boolean(keys.ArrowLeft || keys.KeyA),
-    right: Boolean(keys.ArrowRight || keys.KeyD),
-    jump: Boolean(keys.ArrowUp || keys.KeyW || keys.Space || keys.TouchJump),
+    left: Boolean(keys.ArrowLeft || keys.KeyA || keys.TouchLeft),
+    right: Boolean(keys.ArrowRight || keys.KeyD || keys.TouchRight),
+    jump: Boolean(keys.ArrowUp || keys.KeyW || keys.Space || keys.TouchJump || keys.TouchUp),
     fire: Boolean(keys.KeyX || keys.KeyZ || keys.TouchFire),
   };
 }
