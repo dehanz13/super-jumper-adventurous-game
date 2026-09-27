@@ -32,11 +32,11 @@ export function resolvePlasmaHit(enemy) {
   return { scoreEvent: 'creatureDefeat', sound: 'playKick' };
 }
 
-export function resolvePlayerDamage(player) {
+export function resolvePlayerDamage(player, legacyDamage = false) {
   if (player.isInvincible || player.starTimer > 0) return null;
   if (player.powerUp === 'small') return { loseLife: true };
 
-  if (player.armorTimer > 0) player.y += player.height - 50;
+  if (!legacyDamage || player.armorTimer > 0) player.y += player.height - 50;
   player.powerUp = 'small';
   player.height = 50;
   player.armorTimer = 0;
@@ -46,7 +46,7 @@ export function resolvePlayerDamage(player) {
 }
 
 // Called only after the current enemy hurtbox overlaps the player's hurtbox.
-export function resolvePlayerEnemyContact(player, enemy) {
+export function resolvePlayerEnemyContact(player, enemy, legacyDamage = false) {
   if (!enemy.alive) return null;
   const defeat = (event, sound = 'playKick') => {
     enemy.alive = false;
@@ -67,7 +67,7 @@ export function resolvePlayerEnemyContact(player, enemy) {
       bounce();
       return defeat('hovermiteDefeat', 'playStomp');
     }
-    return player.starTimer > 0 ? defeat('hovermiteDefeat') : resolvePlayerDamage(player);
+    return player.starTimer > 0 ? defeat('hovermiteDefeat') : resolvePlayerDamage(player, legacyDamage);
   }
 
   if (enemy.type === 'warden') {
@@ -79,11 +79,11 @@ export function resolvePlayerEnemyContact(player, enemy) {
       enemy.velocityX = player.x < enemy.x ? 5 : -5;
       return { sound: 'playKick' };
     }
-    return resolvePlayerDamage(player);
+    return resolvePlayerDamage(player, legacyDamage);
   }
 
   if (enemy.type === 'prismite' || enemy.type === 'signalSnare') {
-    return player.starTimer > 0 ? defeat('creatureDefeat') : resolvePlayerDamage(player);
+    return player.starTimer > 0 ? defeat('creatureDefeat') : resolvePlayerDamage(player, legacyDamage);
   }
 
   if (enemy.type === 'rollpod') {
@@ -103,12 +103,12 @@ export function resolvePlayerEnemyContact(player, enemy) {
       return { sound: 'playKick' };
     }
     if (player.starTimer > 0) return defeat('creatureDefeat');
-    return enemy.shellVelocity !== 0 ? resolvePlayerDamage(player) : null;
+    return enemy.shellVelocity !== 0 ? resolvePlayerDamage(player, legacyDamage) : null;
   }
 
   if (isStomp(player, enemy)) {
     bounce();
     return defeat('creatureDefeat', 'playStomp');
   }
-  return player.starTimer > 0 ? defeat('creatureDefeat') : resolvePlayerDamage(player);
+  return player.starTimer > 0 ? defeat('creatureDefeat') : resolvePlayerDamage(player, legacyDamage);
 }

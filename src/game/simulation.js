@@ -7,6 +7,7 @@ import { stepPlayerPhysics } from './playerPhysics';
 import { stepEnemyProjectile, stepPlayerPlasma, tryFirePlasma } from './projectiles';
 import { resolveCourseClear, resolveLifeLoss } from './runProgress';
 import { createScoreLedger, recordScoreEvent } from './scoreLedger';
+import { GAME_RULES_VERSION } from './rulesVersion';
 import { createInitialLevelState } from './worldState';
 
 export function createSimulationState(level = 1, finalLevel = null) {
@@ -15,7 +16,7 @@ export function createSimulationState(level = 1, finalLevel = null) {
 }
 
 // The caller owns presentation. This mutates only the supplied simulation state.
-export function advanceSimulation(state, input, legacyGrowth = false) {
+export function advanceSimulation(state, input, rulesVersion = GAME_RULES_VERSION) {
   if (state.runEnded) throw new Error('Cannot advance an ended sector');
   const { player, world } = state;
   const result = { sounds: [], scoreChanged: false, shardsCollected: 0, livesChanged: false, transition: null };
@@ -77,7 +78,7 @@ export function advanceSimulation(state, input, legacyGrowth = false) {
     }
   });
 
-  const powerUps = stepPowerUps(world.powerUps, world.platforms, player, legacyGrowth);
+  const powerUps = stepPowerUps(world.powerUps, world.platforms, player, rulesVersion < 3);
   if (powerUps.length) {
     award('powerUp', powerUps.length);
     powerUps.forEach(type => result.sounds.push(type === 'heart' ? 'playLife' : 'playPowerUp'));
@@ -100,7 +101,7 @@ export function advanceSimulation(state, input, legacyGrowth = false) {
   const simulationOffset = Math.max(0, player.x - 300);
   stepPlayerPlasma(player, world.platforms, world.enemies, simulationOffset).forEach(applyContact);
   world.enemyProjectiles = world.enemyProjectiles.filter(projectile => {
-    const outcome = stepEnemyProjectile(projectile, player, simulationOffset);
+    const outcome = stepEnemyProjectile(projectile, player, simulationOffset, rulesVersion < 4);
     applyContact(outcome.contact);
     return outcome.keep;
   });
@@ -120,10 +121,10 @@ export function advanceSimulation(state, input, legacyGrowth = false) {
     if (enemy.type === 'signalSnare') {
       if (isSignalSnareActive(enemy)) {
         const body = { x: enemy.x, y: enemy.baseY - 20, width: 48, height: 50 };
-        if (rectanglesOverlap(playerHurtbox(player), body)) applyContact(resolvePlayerEnemyContact(player, enemy));
+        if (rectanglesOverlap(playerHurtbox(player), body)) applyContact(resolvePlayerEnemyContact(player, enemy, rulesVersion < 4));
       }
     } else if (rectanglesOverlap(playerHurtbox(player), creatureHurtbox(enemy))) {
-      applyContact(resolvePlayerEnemyContact(player, enemy));
+      applyContact(resolvePlayerEnemyContact(player, enemy, rulesVersion < 4));
     }
   });
   world.enemies = world.enemies.filter(enemy => enemy.y < 700 && enemy.alive);
@@ -139,7 +140,7 @@ export function advanceSimulation(state, input, legacyGrowth = false) {
   return result;
 }
 
-function replayWithProfile(transcript, versions, finalLevel, legacyGrowth = false) {
+function replayWithProfile(transcript, versions, finalLevel) {
   if (transcript.mode !== 'campaign') throw new RangeError('Campaign replay requires a campaign transcript');
   const state = createSimulationState(1, finalLevel);
   let outcome = null;
@@ -153,7 +154,7 @@ function replayWithProfile(transcript, versions, finalLevel, legacyGrowth = fals
       outcome = null;
     }
     if (state.runEnded) throw new Error('Transcript continues after campaign ended');
-    const result = advanceSimulation(state, input, legacyGrowth);
+    const result = advanceSimulation(state, input, versions?.rulesVersion ?? GAME_RULES_VERSION);
     outcome = result.transition?.state || null;
   }
   if (outcome !== transcript.endedAs) throw new Error('Transcript outcome differs from simulation');
@@ -165,9 +166,9 @@ export function replayCampaign(transcript) {
 }
 
 export function replayLegacyCampaign(transcript, versions) {
-  return replayWithProfile(transcript, versions, 3, true);
+  return replayWithProfile(transcript, versions, 3);
 }
 
 export function replayPreviousCampaign(transcript, versions) {
-  return replayWithProfile(transcript, versions, 7, true);
+  return replayWithProfile(transcript, versions, 7);
 }

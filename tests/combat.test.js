@@ -52,6 +52,19 @@ describe('player contact outcomes', () => {
     expect(resolvePlayerDamage(player({ starTimer: 5 }))).toBeNull();
   });
 
+  it.each(['big', 'plasma'])('keeps grounded feet in place when %s power is lost', powerUp => {
+    const explorer = player({ y: 435, height: 65, powerUp });
+    expect(resolvePlayerDamage(explorer)).toEqual({ sound: 'playDamage' });
+    expect(explorer).toMatchObject({ y: 450, height: 50, powerUp: 'small' });
+    expect(explorer.y + explorer.height).toBe(500);
+  });
+
+  it('preserves the older powered damage position for an earlier replay', () => {
+    const explorer = player({ y: 435, height: 65, powerUp: 'plasma' });
+    resolvePlayerDamage(explorer, true);
+    expect(explorer).toMatchObject({ y: 435, height: 50 });
+  });
+
   it('awards a stomp bounce once and lets shielded contact defeat a creature', () => {
     const explorer = player({ y: 0, velocityY: 6 });
     const pebblit = enemy('pebblit');
