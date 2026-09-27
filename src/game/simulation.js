@@ -15,7 +15,7 @@ export function createSimulationState(level = 1, finalLevel = null) {
 }
 
 // The caller owns presentation. This mutates only the supplied simulation state.
-export function advanceSimulation(state, input) {
+export function advanceSimulation(state, input, legacyGrowth = false) {
   if (state.runEnded) throw new Error('Cannot advance an ended sector');
   const { player, world } = state;
   const result = { sounds: [], scoreChanged: false, shardsCollected: 0, livesChanged: false, transition: null };
@@ -77,7 +77,7 @@ export function advanceSimulation(state, input) {
     }
   });
 
-  const powerUps = stepPowerUps(world.powerUps, world.platforms, player);
+  const powerUps = stepPowerUps(world.powerUps, world.platforms, player, legacyGrowth);
   if (powerUps.length) {
     award('powerUp', powerUps.length);
     powerUps.forEach(type => result.sounds.push(type === 'heart' ? 'playLife' : 'playPowerUp'));
@@ -139,7 +139,7 @@ export function advanceSimulation(state, input) {
   return result;
 }
 
-function replayWithProfile(transcript, versions, finalLevel) {
+function replayWithProfile(transcript, versions, finalLevel, legacyGrowth = false) {
   if (transcript.mode !== 'campaign') throw new RangeError('Campaign replay requires a campaign transcript');
   const state = createSimulationState(1, finalLevel);
   let outcome = null;
@@ -153,7 +153,7 @@ function replayWithProfile(transcript, versions, finalLevel) {
       outcome = null;
     }
     if (state.runEnded) throw new Error('Transcript continues after campaign ended');
-    const result = advanceSimulation(state, input);
+    const result = advanceSimulation(state, input, legacyGrowth);
     outcome = result.transition?.state || null;
   }
   if (outcome !== transcript.endedAs) throw new Error('Transcript outcome differs from simulation');
@@ -165,5 +165,9 @@ export function replayCampaign(transcript) {
 }
 
 export function replayLegacyCampaign(transcript, versions) {
-  return replayWithProfile(transcript, versions, 3);
+  return replayWithProfile(transcript, versions, 3, true);
+}
+
+export function replayPreviousCampaign(transcript, versions) {
+  return replayWithProfile(transcript, versions, 7, true);
 }

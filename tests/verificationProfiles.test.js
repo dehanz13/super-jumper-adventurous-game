@@ -21,6 +21,11 @@ describe('released campaign verifier profile', () => {
     expect(resolveVerificationProfile(versions)).toBeNull();
     expect(currentRunVersions()).toEqual(profile.versions);
     expect(resolveVerificationProfile({ ...profile.versions, levelSetVersion: 'sha256:unknown' })).toBeNull();
+    const previousSevenSector = resolveVerificationProfile({
+      levelSetVersion: LEVEL_SET_VERSION, rulesVersion: 2, scoringVersion: 1,
+    });
+    expect(previousSevenSector.finalLevel).toBe(7);
+    expect(previousSevenSector.replayCampaign).not.toBe(profile.replayCampaign);
     const legacy = resolveVerificationProfile({
       levelSetVersion: 'sha256:2e77fac2230965b7a25f8e4234f154f9e2974be8ba1583303dcf649ba233bb5b',
       rulesVersion: 1, scoringVersion: 1,
