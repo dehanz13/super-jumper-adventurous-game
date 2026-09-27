@@ -132,7 +132,7 @@ export function StartScreen({ onStart, onEnterEditor, onLeaderboard = null, rank
       </div>
 
       <div className="start-instructions text-white text-center text-xs sm:text-sm relative z-10 space-y-1" style={{ textShadow: '1px 1px 0 #000' }}>
-        <p className="mb-1">← → MOVE    ↑/SPACE JUMP</p>
+        <p className="mb-1"><span className="sm:hidden">←→ MOVE • A JUMP • B FIRE</span><span className="hidden sm:inline">← → MOVE • ↑/SPACE/A JUMP • X/Z/B FIRE</span></p>
         <p className="text-[#F4DB70]">BOUNCE OFF PEBBLITS • GATHER STARS • REACH THE BEACON!</p>
       </div>
     </div>

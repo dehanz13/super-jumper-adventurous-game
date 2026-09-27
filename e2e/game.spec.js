@@ -141,11 +141,11 @@ test('mobile menu and controls use the available vertical space', async ({ page,
   const title = await page.getByText('ORBIT JUMP', { exact: true }).boundingBox();
   const start = await page.getByRole('button', { name: /press start/i }).boundingBox();
   const creator = await page.getByRole('button', { name: /level creator/i }).boundingBox();
-  const instructions = await page.getByText(/← → MOVE/).boundingBox();
+  const instructions = await page.locator('.start-instructions').boundingBox();
   const canvas = await page.locator('canvas').boundingBox();
   const pad = await page.getByRole('button', { name: 'Move Down' }).locator('..').boundingBox();
   const jumpA = await page.getByRole('button', { name: 'Jump A' }).boundingBox();
-  const jumpB = await page.getByRole('button', { name: 'Jump B' }).boundingBox();
+  const jumpB = await page.getByRole('button', { name: 'Fire B' }).boundingBox();
 
   expect(start.y - (title.y + title.height)).toBeGreaterThan(40);
   expect(creator.y - (start.y + start.height)).toBeGreaterThan(25);

@@ -23,6 +23,9 @@ describe('gameplay input snapshot', () => {
     expect(readGameplayInput({ ArrowLeft: true, ArrowUp: true, KeyX: true })).toEqual({
       left: true, right: false, jump: true, fire: true,
     });
+    expect(readGameplayInput({ TouchFire: true })).toEqual({
+      left: false, right: false, jump: false, fire: true,
+    });
     expect(readGameplayInput({})).toEqual({ left: false, right: false, jump: false, fire: false });
   });
 });

@@ -52,6 +52,7 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
   const keysRef = useRef({});
   const directionPointerRef = useRef(null);
   const jumpPointersRef = useRef(new Set());
+  const firePointersRef = useRef(new Set());
   const simulationClockRef = useRef({ lastTimestamp: null, accumulator: 0 });
   const livesRef = useRef(3);
   const runEndedRef = useRef(false);
@@ -289,6 +290,7 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
       keysRef.current = {};
       directionPointerRef.current = null;
       jumpPointersRef.current.clear();
+      firePointersRef.current.clear();
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -535,6 +537,18 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
     keysRef.current['Space'] = jumpPointersRef.current.size > 0;
   };
 
+  const handleFirePointerDown = (event) => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    firePointersRef.current.add(event.pointerId);
+    keysRef.current['TouchFire'] = true;
+  };
+
+  const handleFirePointerEnd = (event) => {
+    firePointersRef.current.delete(event.pointerId);
+    keysRef.current['TouchFire'] = firePointersRef.current.size > 0;
+  };
+
   return (
     <div className="game-viewport bg-black">
       <div className="game-shell relative w-full max-w-[800px]">
@@ -628,7 +642,7 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
           </div>
           <div className="jump-buttons flex items-center">
             <button aria-label="Jump A" className="jump-key rounded-full bg-[#A00000] active:bg-[#E52521] border-4 border-[#600000] text-white font-bold text-xl shadow-lg" onPointerDown={handleJumpPointerDown} onPointerUp={handleJumpPointerEnd} onPointerCancel={handleJumpPointerEnd} onLostPointerCapture={handleJumpPointerEnd}>A</button>
-            <button aria-label="Jump B" className="jump-key rounded-full bg-[#A00000] active:bg-[#E52521] border-4 border-[#600000] text-white font-bold text-xl shadow-lg -mt-2" onPointerDown={handleJumpPointerDown} onPointerUp={handleJumpPointerEnd} onPointerCancel={handleJumpPointerEnd} onLostPointerCapture={handleJumpPointerEnd}>B</button>
+            <button aria-label="Fire B" className="jump-key rounded-full bg-[#A00000] active:bg-[#E52521] border-4 border-[#600000] text-white font-bold text-xl shadow-lg -mt-2" onPointerDown={handleFirePointerDown} onPointerUp={handleFirePointerEnd} onPointerCancel={handleFirePointerEnd} onLostPointerCapture={handleFirePointerEnd}>B</button>
           </div>
         </div>
       </div>
