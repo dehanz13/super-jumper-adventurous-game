@@ -5,7 +5,7 @@ export function readGameplayInput(keys) {
     left: Boolean(keys.ArrowLeft || keys.KeyA),
     right: Boolean(keys.ArrowRight || keys.KeyD),
     jump: Boolean(keys.ArrowUp || keys.KeyW || keys.Space),
-    fire: Boolean(keys.KeyX || keys.KeyZ),
+    fire: Boolean(keys.KeyX || keys.KeyZ || keys.TouchFire),
   };
 }
 

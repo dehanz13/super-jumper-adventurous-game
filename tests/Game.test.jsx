@@ -389,6 +389,42 @@ describe('game entry and first frame', () => {
     expect(soundController.playStomp).not.toHaveBeenCalled();
   });
 
+  it('uses mobile B to fire plasma at a creature', () => {
+    const canvas = openEditor();
+    paint(canvas, 'Plasma Core', 96, 320);
+    paint(canvas, 'Pebblit', 192, 320);
+    fireEvent.click(screen.getByRole('button', { name: /test/i }));
+
+    stepFrames(1);
+    const fire = screen.getByRole('button', { name: 'Fire B' });
+    fireEvent.pointerDown(fire, { pointerId: 3 });
+    stepFrames(12);
+    fireEvent.pointerUp(fire, { pointerId: 3 });
+
+    expect(soundController.playFireball).toHaveBeenCalled();
+    expect(soundController.playJump).not.toHaveBeenCalled();
+    expect(screen.getByText('001200')).toBeInTheDocument();
+  });
+
+  it('accepts simultaneous mobile A jump and B fire', () => {
+    const canvas = openEditor();
+    paint(canvas, 'Plasma Core', 96, 320);
+    fireEvent.click(screen.getByRole('button', { name: /test/i }));
+    stepFrames(1);
+    stepFrames(30);
+
+    const jump = screen.getByRole('button', { name: 'Jump A' });
+    const fire = screen.getByRole('button', { name: 'Fire B' });
+    fireEvent.pointerDown(jump, { pointerId: 2 });
+    fireEvent.pointerDown(fire, { pointerId: 3 });
+    stepFrames(1);
+    fireEvent.pointerUp(fire, { pointerId: 3 });
+    fireEvent.pointerUp(jump, { pointerId: 2 });
+
+    expect(soundController.playJump).toHaveBeenCalled();
+    expect(soundController.playFireball).toHaveBeenCalled();
+  });
+
   it('spaces plasma shots by simulation steps while wall time stands still', () => {
     const canvas = openEditor();
     paint(canvas, 'Plasma Core', 96, 320);
