@@ -582,6 +582,22 @@ describe('game entry and first frame', () => {
     expect(soundController.playJump).toHaveBeenCalled();
   });
 
+  it.each(['keyboard', 'touch'])('keeps jump held when %s releases before the other input', released => {
+    render(<Game />);
+    fireEvent.click(screen.getByText(/skip/i));
+    fireEvent.click(screen.getByRole('button', { name: /press start/i }));
+    stepFrames(30);
+
+    const jumpButton = screen.getByRole('button', { name: 'Jump A' });
+    fireEvent.keyDown(window, { key: ' ', code: 'Space' });
+    fireEvent.pointerDown(jumpButton, { pointerId: 2 });
+    if (released === 'keyboard') fireEvent.keyUp(window, { key: ' ', code: 'Space' });
+    else fireEvent.pointerUp(jumpButton, { pointerId: 2 });
+    stepFrames(1);
+
+    expect(soundController.playJump).toHaveBeenCalled();
+  });
+
   it('collects a coin placed in the player path', () => {
     const canvas = openEditor();
     paint(canvas, 'Star Shard', 96, 384);
