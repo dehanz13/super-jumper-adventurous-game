@@ -126,6 +126,15 @@ describe('game entry and first frame', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: /pause game/i })).toBeInTheDocument());
   });
 
+  it('leaves guest form keys available to native controls', () => {
+    render(<Game runClient={{ start: vi.fn() }} />);
+    fireEvent.click(screen.getByText(/skip/i));
+
+    expect(fireEvent.keyDown(screen.getByLabelText('Public name'), { key: ' ', code: 'Space' })).toBe(true);
+    expect(fireEvent.keyDown(screen.getByLabelText('Country'), { key: 'ArrowDown', code: 'ArrowDown' })).toBe(true);
+    expect(fireEvent.keyDown(screen.getByRole('button', { name: /level creator/i }), { key: ' ', code: 'Space' })).toBe(true);
+  });
+
   it('keeps local play available when the ranking service cannot start', async () => {
     const runClient = { start: vi.fn(async () => { throw new Error('offline'); }) };
     render(<Game runClient={runClient} />);
@@ -555,6 +564,20 @@ describe('game entry and first frame', () => {
     fireEvent.pointerDown(jump, { pointerId: 2 });
     stepFrames(1);
     fireEvent.pointerUp(jump, { pointerId: 2 });
+
+    expect(soundController.playJump).toHaveBeenCalled();
+  });
+
+  it('keeps keyboard jump available after an on-screen button takes focus', () => {
+    render(<Game />);
+    fireEvent.click(screen.getByText(/skip/i));
+    fireEvent.click(screen.getByRole('button', { name: /press start/i }));
+    stepFrames(30);
+
+    const jumpButton = screen.getByRole('button', { name: 'Jump A' });
+    fireEvent.keyDown(jumpButton, { key: ' ', code: 'Space' });
+    stepFrames(1);
+    fireEvent.keyUp(jumpButton, { key: ' ', code: 'Space' });
 
     expect(soundController.playJump).toHaveBeenCalled();
   });
