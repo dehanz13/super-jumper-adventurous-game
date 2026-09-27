@@ -6,6 +6,7 @@ import { currentRunVersions } from '../src/game/rankedRunVerifier';
 
 vi.mock('../src/components/SoundController', () => ({
   soundController: {
+    isMuted: false,
     init: vi.fn(), playBGM: vi.fn(), stopBGM: vi.fn(), toggleMute: vi.fn(() => true),
     playJump: vi.fn(), playPowerUp: vi.fn(), playCoin: vi.fn(), playStomp: vi.fn(),
     playDie: vi.fn(), playStageClear: vi.fn(), playFireball: vi.fn(), playLand: vi.fn(),
@@ -58,6 +59,11 @@ describe('game entry and first frame', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    soundController.isMuted = false;
+    soundController.toggleMute.mockImplementation(() => {
+      soundController.isMuted = !soundController.isMuted;
+      return soundController.isMuted;
+    });
     frames = new Map();
     nextFrameId = 0;
     stroke = vi.fn();
@@ -227,6 +233,19 @@ describe('game entry and first frame', () => {
     fireEvent.click(screen.getByRole('button', { name: /continue/i }));
     fireEvent.click(screen.getByRole('button', { name: 'Restart game' }));
     expect(screen.getByText('SECTOR')).toBeInTheDocument();
+  });
+
+  it('shows the retained mute setting after the game remounts', () => {
+    const firstMount = render(<Game />);
+    const soundButton = screen.getByRole('button', { name: 'Toggle sound' });
+    expect(soundButton).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(soundButton);
+    expect(soundButton).toHaveAttribute('aria-pressed', 'true');
+    firstMount.unmount();
+
+    render(<Game />);
+    expect(screen.getByRole('button', { name: 'Toggle sound' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('finishes a custom course and continues to the next world', () => {

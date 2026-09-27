@@ -67,7 +67,7 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
   const [shards, setShards] = useState(0);
   const [lives, setLives] = useState(3);
   const [level, setLevel] = useState(1);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(() => soundController.isMuted);
 
   // Editor state
   const [selectedTool, setSelectedTool] = useState('brush'); // brush, eraser, hand
@@ -567,7 +567,7 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
           </div>
 
           <div className="flex gap-2">
-            <Button aria-label="Toggle sound" onClick={toggleMute} variant="outline" size="icon" className="bg-black/40 border-white/20 hover:bg-white/10">{isMuted ? <VolumeX className="h-4 w-4 text-white" /> : <Volume2 className="h-4 w-4 text-white" />}</Button>
+            <Button aria-label="Toggle sound" aria-pressed={isMuted} onClick={toggleMute} variant="outline" size="icon" className="bg-black/40 border-white/20 hover:bg-white/10">{isMuted ? <VolumeX className="h-4 w-4 text-white" /> : <Volume2 className="h-4 w-4 text-white" />}</Button>
             {gameState === 'playing' && <Button aria-label="Pause game" onClick={togglePause} variant="outline" size="icon" className="bg-black/40 border-white/20 hover:bg-white/10"><Pause className="h-4 w-4 text-white" /></Button>}
             <Button aria-label="Restart game" onClick={startGame} variant="outline" size="icon" className="bg-black/40 border-white/20 hover:bg-white/10"><RotateCcw className="h-4 w-4 text-white" /></Button>
           </div>
