@@ -43,8 +43,16 @@ describe('game entry and first frame', () => {
     return container.querySelector('canvas');
   };
 
+  const selectItem = (item) => {
+    const creatures = ['Pebblit', 'Rollpod', 'Signal Snare', 'Prismite', 'Hovermite', 'Warden', 'Skitter', 'Orbit Skimmer', 'Pulse Drone'];
+    const pickups = ['Power Cell', 'Plasma Core', 'Spectrum Shield', 'Armor', 'Heart'];
+    const group = creatures.includes(item) ? 'Creatures' : pickups.includes(item) ? 'Pickups' : 'Terrain';
+    fireEvent.click(screen.getByRole('tab', { name: group }));
+    fireEvent.click(screen.getByRole('button', { name: item, exact: true }));
+  };
+
   const paint = (canvas, item, x, y) => {
-    fireEvent.click(screen.getByText(item));
+    selectItem(item);
     fireEvent.mouseDown(canvas, { clientX: x, clientY: y });
   };
 
@@ -174,7 +182,7 @@ describe('game entry and first frame', () => {
     const canvas = container.querySelector('canvas');
 
     for (const [index, item] of ['Terrain', 'Alloy Block', '?', 'Star Shard', 'Pebblit', 'Rollpod', 'Signal Snare', 'Prismite', 'Hovermite', 'Warden', 'Power Cell', 'Plasma Core', 'Spectrum Shield', 'Beacon'].entries()) {
-      fireEvent.click(screen.getByText(item));
+      selectItem(item);
       fireEvent.mouseDown(canvas, { clientX: 64 + index * 48, clientY: 320 });
     }
     stepFrames(1);
@@ -220,7 +228,7 @@ describe('game entry and first frame', () => {
     const { container } = render(<Game />);
     fireEvent.click(screen.getByText(/skip/i));
     fireEvent.click(screen.getByRole('button', { name: /level creator/i }));
-    fireEvent.click(screen.getByText('Beacon'));
+    selectItem('Beacon');
     fireEvent.mouseDown(container.querySelector('canvas'), { clientX: 96, clientY: 320 });
     fireEvent.click(screen.getByRole('button', { name: /test/i }));
 
@@ -261,7 +269,7 @@ describe('game entry and first frame', () => {
     const { container } = render(<Game />);
     fireEvent.click(screen.getByText(/skip/i));
     fireEvent.click(screen.getByRole('button', { name: /level creator/i }));
-    fireEvent.click(screen.getByText('Pebblit'));
+    selectItem('Pebblit');
     fireEvent.mouseDown(container.querySelector('canvas'), { clientX: 128, clientY: 448 });
     fireEvent.click(screen.getByRole('button', { name: /test/i }));
 
@@ -295,9 +303,9 @@ describe('game entry and first frame', () => {
     fireEvent.click(screen.getByText(/skip/i));
     fireEvent.click(screen.getByRole('button', { name: /level creator/i }));
     const canvas = container.querySelector('canvas');
-    fireEvent.click(screen.getByText('?'));
+    selectItem('?');
     fireEvent.mouseDown(canvas, { clientX: 96, clientY: 352 });
-    fireEvent.click(screen.getByText('Power Cell'));
+    selectItem('Power Cell');
     fireEvent.mouseDown(canvas, { clientX: 96, clientY: 320 });
     fireEvent.click(screen.getByRole('button', { name: /test/i }));
 
@@ -323,7 +331,7 @@ describe('game entry and first frame', () => {
     const { container } = render(<Game />);
     fireEvent.click(screen.getByText(/skip/i));
     fireEvent.click(screen.getByRole('button', { name: /level creator/i }));
-    fireEvent.click(screen.getByText('Warden'));
+    selectItem('Warden');
     fireEvent.mouseDown(container.querySelector('canvas'), { clientX: 512, clientY: 448 });
     fireEvent.click(screen.getByRole('button', { name: /test/i }));
 
@@ -339,7 +347,7 @@ describe('game entry and first frame', () => {
     const { container } = render(<Game />);
     fireEvent.click(screen.getByText(/skip/i));
     fireEvent.click(screen.getByRole('button', { name: /level creator/i }));
-    fireEvent.click(screen.getByText('Hovermite'));
+    selectItem('Hovermite');
     fireEvent.mouseDown(container.querySelector('canvas'), { clientX: 160, clientY: 80 });
     fireEvent.click(screen.getByRole('button', { name: /test/i }));
 

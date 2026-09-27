@@ -17,6 +17,34 @@ import { createLocalRunCompletion } from '@/game/runCompletion';
 import { useRankedRun } from '@/game/useRankedRun';
 import { createEmptyWorldState, createInitialLevelState, createPlayerState } from '@/game/worldState';
 
+const EDITOR_GROUPS = [
+  { id: 'terrain', label: 'Terrain', items: [
+    { type: 'platform', subType: 'ground', label: 'Terrain', color: '#6756B8' },
+    { type: 'platform', subType: 'brick', label: 'Alloy Block', color: '#7788AC' },
+    { type: 'platform', subType: 'question', label: '?', color: '#F4DB70' },
+    { type: 'coin', subType: 'coin', label: 'Star Shard', color: '#F4DB70' },
+    { type: 'flag', subType: 'flag', label: 'Beacon', color: '#28D9CF' },
+  ] },
+  { id: 'creatures', label: 'Creatures', items: [
+    { type: 'enemy', subType: 'pebblit', label: 'Pebblit', color: '#90D77D' },
+    { type: 'enemy', subType: 'rollpod', label: 'Rollpod', color: '#28D9CF' },
+    { type: 'enemy', subType: 'signalSnare', label: 'Signal Snare', color: '#F38173' },
+    { type: 'enemy', subType: 'prismite', label: 'Prismite', color: '#F38173' },
+    { type: 'enemy', subType: 'hovermite', label: 'Hovermite', color: '#E7FAFF' },
+    { type: 'enemy', subType: 'warden', label: 'Warden', color: '#6756B8' },
+    { type: 'enemy', subType: 'skitter', label: 'Skitter', color: '#F38173' },
+    { type: 'enemy', subType: 'orbitSkimmer', label: 'Orbit Skimmer', color: '#28D9CF' },
+    { type: 'enemy', subType: 'pulseDrone', label: 'Pulse Drone', color: '#F4DB70' },
+  ] },
+  { id: 'pickups', label: 'Pickups', items: [
+    { type: 'powerup', subType: 'powerCell', label: 'Power Cell', color: '#28D9CF' },
+    { type: 'powerup', subType: 'plasma', label: 'Plasma Core', color: '#F38173' },
+    { type: 'powerup', subType: 'spectrum', label: 'Spectrum Shield', color: '#F4DB70' },
+    { type: 'powerup', subType: 'armor', label: 'Armor', color: '#28D9CF' },
+    { type: 'powerup', subType: 'heart', label: 'Heart', color: '#F38173' },
+  ] },
+];
+
 export default function Game({ onRunComplete = null, runClient = null, boardClient = null, guestStore = null }) {
   const ranked = useRankedRun(runClient, guestStore);
   const canvasRef = useRef(null);
@@ -43,6 +71,7 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
   // Editor state
   const [selectedTool, setSelectedTool] = useState('brush'); // brush, eraser, hand
   const [selectedItem, setSelectedItem] = useState({ type: 'platform', subType: 'brick' });
+  const [editorGroup, setEditorGroup] = useState('terrain');
   const [showGrid, setShowGrid] = useState(true);
   const customLevelRef = useRef(null);
 
@@ -516,58 +545,6 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
           </div>
         </div>
 
-        {/* Editor UI Toolbar */}
-        {gameState === 'editor' && (
-            <div className="absolute top-16 left-4 z-50 flex flex-col gap-2 bg-black/80 p-2 rounded-lg border border-[#6756B8]">
-                <div className="text-white text-xs font-bold text-center mb-1">TOOLS</div>
-                <Button aria-label="Brush tool" size="icon" variant={selectedTool === 'brush' ? "default" : "ghost"} onClick={() => setSelectedTool('brush')} className="h-8 w-8"><Plus className="h-4 w-4" /></Button>
-                <Button aria-label="Eraser tool" size="icon" variant={selectedTool === 'eraser' ? "default" : "ghost"} onClick={() => setSelectedTool('eraser')} className="h-8 w-8"><Eraser className="h-4 w-4" /></Button>
-                <div className="h-px bg-white/20 my-1" />
-                <Button aria-label="Toggle grid" size="icon" variant={showGrid ? "default" : "ghost"} onClick={() => setShowGrid(!showGrid)} className="h-8 w-8"><Grid className="h-4 w-4" /></Button>
-                <Button aria-label="Save level" size="icon" variant="ghost" onClick={saveCustomLevel} className="h-8 w-8 text-green-400 hover:text-green-300"><Save className="h-4 w-4" /></Button>
-                <Button size="sm" variant="destructive" onClick={() => { saveCustomLevel(); initLevel('custom'); resetRunScore('custom'); setGameState('playing'); }} className="mt-2 text-xs"><Play className="h-3 w-3 mr-1" /> TEST</Button>
-            </div>
-        )}
-
-        {gameState === 'editor' && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 flex gap-2 bg-black/80 p-2 rounded-lg border border-[#6756B8] overflow-x-auto max-w-[90vw]">
-                {[
-                    { type: 'platform', subType: 'ground', label: 'Terrain', color: '#6756B8' },
-                    { type: 'platform', subType: 'brick', label: 'Alloy Block', color: '#7788AC' },
-                    { type: 'platform', subType: 'question', label: '?', color: '#F4DB70' },
-                    { type: 'coin', subType: 'coin', label: 'Star Shard', color: '#F4DB70' },
-                    { type: 'enemy', subType: 'pebblit', label: 'Pebblit', color: '#90D77D' },
-                    { type: 'enemy', subType: 'rollpod', label: 'Rollpod', color: '#28D9CF' },
-                    { type: 'enemy', subType: 'signalSnare', label: 'Signal Snare', color: '#F38173' },
-                    { type: 'enemy', subType: 'prismite', label: 'Prismite', color: '#F38173' },
-                    { type: 'enemy', subType: 'hovermite', label: 'Hovermite', color: '#E7FAFF' },
-                    { type: 'enemy', subType: 'warden', label: 'Warden', color: '#6756B8' },
-                    { type: 'enemy', subType: 'skitter', label: 'Skitter', color: '#F38173' },
-                    { type: 'enemy', subType: 'orbitSkimmer', label: 'Orbit Skimmer', color: '#28D9CF' },
-                    { type: 'enemy', subType: 'pulseDrone', label: 'Pulse Drone', color: '#F4DB70' },
-                    { type: 'powerup', subType: 'powerCell', label: 'Power Cell', color: '#28D9CF' },
-                    { type: 'powerup', subType: 'plasma', label: 'Plasma Core', color: '#F38173' },
-                    { type: 'powerup', subType: 'spectrum', label: 'Spectrum Shield', color: '#F4DB70' },
-                    { type: 'powerup', subType: 'armor', label: 'Armor', color: '#28D9CF' },
-                    { type: 'powerup', subType: 'heart', label: 'Heart', color: '#F38173' },
-                    { type: 'flag', subType: 'flag', label: 'Beacon', color: '#28D9CF' },
-                ].map((item, i) => (
-                    <button
-                        key={i}
-                        onClick={() => { setSelectedItem(item); setSelectedTool('brush'); }}
-                        className={`flex flex-col items-center p-2 rounded min-w-[60px] transition-all ${
-                            selectedItem.subType === item.subType && selectedTool === 'brush'
-                            ? 'bg-white/20 ring-2 ring-white'
-                            : 'hover:bg-white/10'
-                        }`}
-                    >
-                        <div className="w-6 h-6 mb-1 border border-white/50" style={{ backgroundColor: item.color }}></div>
-                        <span className="text-[10px] text-white font-mono">{item.label}</span>
-                    </button>
-                ))}
-            </div>
-        )}
-
         {/* Game Canvas */}
         <div className="game-stage relative overflow-hidden shadow-2xl shadow-black/50 border-4 border-[#6756B8]">
           <canvas
@@ -580,6 +557,37 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
             className={`game-canvas bg-sky-300 block ${gameState === 'editor' ? 'cursor-none' : ''}`}
             style={{ imageRendering: 'pixelated' }}
           />
+
+          {gameState === 'editor' && <>
+            <div aria-label="Level creator tools" className="editor-tools absolute top-2 left-2 z-50 bg-black/85 rounded-lg border border-[#6756B8]">
+              <div className="editor-tools-label text-white text-xs font-bold text-center">TOOLS</div>
+              <Button aria-label="Brush tool" size="icon" variant={selectedTool === 'brush' ? 'default' : 'ghost'} onClick={() => setSelectedTool('brush')} className="h-8 w-8"><Plus className="h-4 w-4" /></Button>
+              <Button aria-label="Eraser tool" size="icon" variant={selectedTool === 'eraser' ? 'default' : 'ghost'} onClick={() => setSelectedTool('eraser')} className="h-8 w-8"><Eraser className="h-4 w-4" /></Button>
+              <Button aria-label="Toggle grid" size="icon" variant={showGrid ? 'default' : 'ghost'} onClick={() => setShowGrid(!showGrid)} className="h-8 w-8"><Grid className="h-4 w-4" /></Button>
+              <Button aria-label="Save level" size="icon" variant="ghost" onClick={saveCustomLevel} className="h-8 w-8 text-green-400 hover:text-green-300"><Save className="h-4 w-4" /></Button>
+              <Button size="sm" variant="destructive" onClick={() => { saveCustomLevel(); initLevel('custom'); resetRunScore('custom'); setGameState('playing'); }} className="editor-test text-xs"><Play className="h-3 w-3 mr-1" /> TEST</Button>
+            </div>
+
+            <div className="editor-palette absolute bottom-2 left-2 right-2 z-50 bg-black/85 p-2 rounded-lg border border-[#6756B8]">
+              <div role="tablist" aria-label="Level creator palette" className="editor-tabs flex gap-1 mb-2">
+                {EDITOR_GROUPS.map(group => <button key={group.id} type="button" role="tab" aria-selected={editorGroup === group.id}
+                  onClick={() => setEditorGroup(group.id)}
+                  className={`flex-1 rounded px-2 py-1 text-xs font-bold text-white ${editorGroup === group.id ? 'bg-[#137F87]' : 'bg-[#303752]'}`}>
+                  {group.label}
+                </button>)}
+              </div>
+              <div className="editor-palette-grid" role="tabpanel">
+                {EDITOR_GROUPS.find(group => group.id === editorGroup).items.map(item => (
+                  <button key={item.subType} type="button" onClick={() => { setSelectedItem(item); setSelectedTool('brush'); }}
+                    aria-pressed={selectedItem.subType === item.subType && selectedTool === 'brush'}
+                    className={`editor-item flex flex-col items-center rounded text-white transition-colors ${selectedItem.subType === item.subType && selectedTool === 'brush' ? 'bg-white/20 ring-2 ring-white' : 'hover:bg-white/10'}`}>
+                    <span className="editor-item-swatch border border-white/50" style={{ backgroundColor: item.color }} />
+                    <span className="editor-item-label font-mono">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>}
 
           {/* Overlays */}
           {gameState === 'intro' && <IntroScreen introPhase={introPhase} onSkip={() => { setGameState('start'); setIntroPhase(0); }} />}

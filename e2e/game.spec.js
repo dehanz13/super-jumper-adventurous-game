@@ -185,6 +185,43 @@ test('the game shell fits phone, tablet, and desktop viewports', async ({ browse
   }
 });
 
+test('level creator tools and grouped palette fit touch viewports', async ({ browser }) => {
+  for (const [width, height] of [[320, 568], [375, 667], [667, 375], [768, 1024]]) {
+    const context = await browser.newContext({ viewport: { width, height }, isMobile: true, hasTouch: true });
+    const page = await context.newPage();
+    await page.goto('/');
+    await page.getByText(/skip/i).click();
+    await page.getByRole('button', { name: /level creator/i }).click();
+
+    await expect(page.getByRole('button', { name: 'Brush tool' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Save level' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Creatures' })).toBeVisible();
+    await page.getByRole('tab', { name: 'Creatures' }).click();
+    await expect(page.getByRole('button', { name: 'Pulse Drone' })).toBeVisible();
+    await page.getByRole('tab', { name: 'Pickups' }).click();
+    await expect(page.getByRole('button', { name: 'Heart' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Armor' })).toBeVisible();
+
+    const layout = await page.evaluate(() => {
+      const box = selector => document.querySelector(selector).getBoundingClientRect();
+      return {
+        scrollWidth: document.documentElement.scrollWidth,
+        scrollHeight: document.documentElement.scrollHeight,
+        stage: box('.game-stage'),
+        tools: box('.editor-tools'),
+        palette: box('.editor-palette'),
+        controls: box('.touch-controls'),
+      };
+    });
+    expect(layout.scrollWidth).toBeLessThanOrEqual(width);
+    expect(layout.scrollHeight).toBeLessThanOrEqual(height);
+    expect(layout.tools.bottom).toBeLessThan(layout.palette.top);
+    expect(layout.palette.bottom).toBeLessThanOrEqual(layout.stage.bottom);
+    expect(layout.controls.top).toBeGreaterThanOrEqual(layout.stage.bottom);
+    await context.close();
+  }
+});
+
 test('dragging across the direction pad reverses movement', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'mobile viewport only');
   await page.goto('/');
