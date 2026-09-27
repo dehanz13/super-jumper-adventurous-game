@@ -535,12 +535,12 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
     event.preventDefault();
     event.currentTarget.setPointerCapture?.(event.pointerId);
     jumpPointersRef.current.add(event.pointerId);
-    keysRef.current['Space'] = true;
+    keysRef.current['TouchJump'] = true;
   };
 
   const handleJumpPointerEnd = (event) => {
     jumpPointersRef.current.delete(event.pointerId);
-    keysRef.current['Space'] = jumpPointersRef.current.size > 0;
+    keysRef.current['TouchJump'] = jumpPointersRef.current.size > 0;
   };
 
   const handleFirePointerDown = (event) => {
