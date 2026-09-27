@@ -7,7 +7,7 @@ import { currentRunVersions } from '../src/game/rankedRunVerifier';
 vi.mock('../src/components/SoundController', () => ({
   soundController: {
     isMuted: false,
-    init: vi.fn(), playBGM: vi.fn(), stopBGM: vi.fn(), toggleMute: vi.fn(() => true),
+    init: vi.fn(), playBGM: vi.fn(), stopBGM: vi.fn(), stopAll: vi.fn(), toggleMute: vi.fn(() => true),
     playJump: vi.fn(), playPowerUp: vi.fn(), playSpawn: vi.fn(), playDash: vi.fn(), playArmorExpire: vi.fn(), playCoin: vi.fn(), playStomp: vi.fn(),
     playDie: vi.fn(), playStageClear: vi.fn(), playFireball: vi.fn(), playLand: vi.fn(),
     playBump: vi.fn(), playKick: vi.fn(), playDamage: vi.fn(), playSelect: vi.fn(),
@@ -153,14 +153,14 @@ describe('game entry and first frame', () => {
     expect(screen.getByRole('button', { name: /pause game/i })).toBeInTheDocument();
   });
 
-  it('stops background music when the embedded game unmounts', () => {
+  it('stops all game audio when the embedded game unmounts', () => {
     const view = render(<Game />);
     fireEvent.click(screen.getByText(/skip/i));
     fireEvent.click(screen.getByRole('button', { name: /press start/i }));
     expect(soundController.playBGM).toHaveBeenCalledWith(1);
 
     view.unmount();
-    expect(soundController.stopBGM).toHaveBeenCalledTimes(1);
+    expect(soundController.stopAll).toHaveBeenCalledTimes(1);
   });
 
   it('pauses a hidden run and clears controls before the player resumes', () => {

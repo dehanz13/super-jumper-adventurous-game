@@ -116,4 +116,27 @@ describe('game audio', () => {
     soundController.playDie();
     expect(soundController.isPlaying).toBe(false);
   });
+
+  it('stops a sector-clear cue before the next soundtrack begins', () => {
+    soundController.init();
+    soundController.playStageClear();
+    const clearCue = nodes.filter(node => node.start.mock.calls.length).at(-1);
+    expect(clearCue.stop).toHaveBeenCalledTimes(1);
+
+    soundController.playBGM(2);
+    expect(clearCue.stop).toHaveBeenCalledTimes(2);
+    expect(clearCue.disconnect).toHaveBeenCalled();
+    expect(soundController.isPlaying).toBe(true);
+  });
+
+  it('stops a game-over cue when the game audio is torn down', () => {
+    soundController.init();
+    soundController.playDie();
+    const gameOverCue = nodes.filter(node => node.start.mock.calls.length).at(-1);
+
+    soundController.stopAll();
+    expect(gameOverCue.stop).toHaveBeenCalledTimes(2);
+    expect(gameOverCue.disconnect).toHaveBeenCalled();
+    expect(soundController.isPlaying).toBe(false);
+  });
 });

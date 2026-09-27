@@ -5,6 +5,7 @@ class SoundController {
     this.ctx = null;
     this.masterGain = null;
     this.bgmOscillators = [];
+    this.finishOscillator = null;
     this.isMuted = false;
     this.currentBgm = null;
     this.nextNoteTime = 0;
@@ -261,7 +262,7 @@ class SoundController {
   }
 
   playDie() {
-    this.stopBGM();
+    this.stopAll();
     if (!this.ctx || this.isMuted) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
@@ -279,12 +280,17 @@ class SoundController {
 
     osc.connect(gain);
     gain.connect(this.masterGain);
+    this.finishOscillator = osc;
+    osc.onended = () => {
+      if (this.finishOscillator === osc) this.finishOscillator = null;
+      osc.disconnect();
+    };
     osc.start();
     osc.stop(t + 2.1);
   }
 
   playStageClear() {
-    this.stopBGM();
+    this.stopAll();
     if (!this.ctx || this.isMuted) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
@@ -304,6 +310,11 @@ class SoundController {
 
     osc.connect(gain);
     gain.connect(this.masterGain);
+    this.finishOscillator = osc;
+    osc.onended = () => {
+      if (this.finishOscillator === osc) this.finishOscillator = null;
+      osc.disconnect();
+    };
     osc.start();
     osc.stop(t + 3);
   }
@@ -320,9 +331,22 @@ class SoundController {
     this.bgmOscillators = [];
   }
 
+  stopFinishCue() {
+    const osc = this.finishOscillator;
+    this.finishOscillator = null;
+    if (!osc) return;
+    try { osc.stop(); } catch {}
+    osc.disconnect();
+  }
+
+  stopAll() {
+    this.stopBGM();
+    this.stopFinishCue();
+  }
+
   playBGM(levelType) {
     if (!this.ctx) return;
-    this.stopBGM();
+    this.stopAll();
     this.isPlaying = true;
     this.currentBgm = levelType;
     const trackNumber = Number.isInteger(levelType) && levelType > 0 ? ((levelType - 1) % 3) + 1 : 1;
