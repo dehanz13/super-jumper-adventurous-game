@@ -84,10 +84,11 @@ describe('fixed step enemy motion', () => {
     expect(skitter.x).toBeLessThan(160);
 
     const skimmer = { type: 'orbitSkimmer', x: 200, y: 315, baseY: 315, width: 44, height: 42, velocityX: -2, timer: 0, dashTimer: 104 };
-    stepEnemyMotion(skimmer, explorer, ground, [skimmer]);
+    expect(stepEnemyMotion(skimmer, explorer, ground, [skimmer]).dashStarted).toBe(true);
     expect(skimmer.x).toBe(194);
     expect(skimmer.y).not.toBe(315);
     expect(skimmer.dashTicks).toBe(13);
+    expect(stepEnemyMotion(skimmer, explorer, ground, [skimmer]).dashStarted).toBe(false);
 
     const drone = { type: 'pulseDrone', x: 200, y: 452, width: 46, height: 48, fireTimer: 99, fireInterval: 100 };
     expect(stepEnemyMotion(drone, explorer, ground, [drone]).projectile)

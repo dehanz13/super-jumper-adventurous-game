@@ -12,7 +12,7 @@ export function isSignalSnareActive(enemy) {
 
 // Mutates one creature for a fixed simulation step and reports world changes.
 export function stepEnemyMotion(enemy, player, platforms, enemies) {
-  const outcome = { spawnedEnemy: null, projectile: null, shellDefeats: 0 };
+  const outcome = { spawnedEnemy: null, projectile: null, shellDefeats: 0, dashStarted: false };
 
   if (enemy.type === 'signalSnare') {
     enemy.timer = (enemy.timer || 0) + 1;
@@ -45,6 +45,7 @@ export function stepEnemyMotion(enemy, player, platforms, enemies) {
       enemy.dashTimer = 0;
       enemy.dashTicks = 14;
       enemy.velocityX = player.x < enemy.x ? -Math.abs(enemy.velocityX) : Math.abs(enemy.velocityX);
+      outcome.dashStarted = true;
     }
     if (enemy.dashTicks > 0) {
       enemy.x += Math.sign(enemy.velocityX) * 6;

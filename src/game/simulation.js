@@ -92,6 +92,7 @@ export function advanceSimulation(state, input, rulesVersion = GAME_RULES_VERSIO
     player.y += player.height - 50;
     player.powerUp = 'small';
     player.height = 50;
+    result.sounds.push('playArmorExpire');
   }
   if (player.starTimer > 0 && --player.starTimer <= 0) player.isInvincible = false;
   if (player.invincibleTimer > 0 && --player.invincibleTimer <= 0) player.isInvincible = false;
@@ -109,7 +110,11 @@ export function advanceSimulation(state, input, rulesVersion = GAME_RULES_VERSIO
   world.enemies.forEach(enemy => {
     if (!enemy.alive) return;
     const outcome = stepEnemyMotion(enemy, player, world.platforms, world.enemies);
-    if (outcome.spawnedEnemy) world.enemies.push(outcome.spawnedEnemy);
+    if (outcome.spawnedEnemy) {
+      world.enemies.push(outcome.spawnedEnemy);
+      result.sounds.push('playSpawn');
+    }
+    if (outcome.dashStarted) result.sounds.push('playDash');
     if (outcome.projectile) {
       world.enemyProjectiles.push(outcome.projectile);
       result.sounds.push('playFireball');

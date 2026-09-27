@@ -132,6 +132,55 @@ class SoundController {
     osc.stop(t + 0.6);
   }
 
+  playSpawn() {
+    if (!this.ctx || this.isMuted) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(260, t);
+    osc.frequency.linearRampToValueAtTime(620, t + 0.16);
+    gain.gain.setValueAtTime(0.14, t);
+    gain.gain.linearRampToValueAtTime(0, t + 0.18);
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start();
+    osc.stop(t + 0.18);
+  }
+
+  playDash() {
+    if (!this.ctx || this.isMuted) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(510, t);
+    osc.frequency.linearRampToValueAtTime(190, t + 0.12);
+    gain.gain.setValueAtTime(0.1, t);
+    gain.gain.linearRampToValueAtTime(0, t + 0.12);
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start();
+    osc.stop(t + 0.12);
+  }
+
+  playArmorExpire() {
+    if (!this.ctx || this.isMuted) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(440, t);
+    osc.frequency.setValueAtTime(330, t + 0.1);
+    osc.frequency.setValueAtTime(220, t + 0.2);
+    gain.gain.setValueAtTime(0.18, t);
+    gain.gain.linearRampToValueAtTime(0, t + 0.3);
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start();
+    osc.stop(t + 0.3);
+  }
+
   playLife() {
     if (!this.ctx || this.isMuted) return;
     const t = this.ctx.currentTime;

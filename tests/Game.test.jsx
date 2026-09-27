@@ -8,7 +8,7 @@ vi.mock('../src/components/SoundController', () => ({
   soundController: {
     isMuted: false,
     init: vi.fn(), playBGM: vi.fn(), stopBGM: vi.fn(), toggleMute: vi.fn(() => true),
-    playJump: vi.fn(), playPowerUp: vi.fn(), playCoin: vi.fn(), playStomp: vi.fn(),
+    playJump: vi.fn(), playPowerUp: vi.fn(), playSpawn: vi.fn(), playDash: vi.fn(), playArmorExpire: vi.fn(), playCoin: vi.fn(), playStomp: vi.fn(),
     playDie: vi.fn(), playStageClear: vi.fn(), playFireball: vi.fn(), playLand: vi.fn(),
     playBump: vi.fn(), playKick: vi.fn(), playDamage: vi.fn(), playSelect: vi.fn(),
   },

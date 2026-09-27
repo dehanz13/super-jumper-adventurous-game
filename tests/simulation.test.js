@@ -87,9 +87,28 @@ describe('shared campaign simulation', () => {
     state.player.onGround = true;
     for (let step = 1; step < 599; step++) advanceSimulation(state, idle);
     expect(state.player.armorTimer).toBe(1);
-    advanceSimulation(state, idle);
+    const expired = advanceSimulation(state, idle);
     expect(state.player).toMatchObject({ powerUp: 'small', height: 50, armorTimer: 0 });
+    expect(expired.sounds).toContain('playArmorExpire');
     expect(state.lives).toBe(6);
+  });
+
+  it('emits one cue when a Hovermite spawns and one when an Orbit Skimmer starts a dash', () => {
+    const state = createSimulationState(4);
+    state.world.platforms = [];
+    state.world.coins = [];
+    state.world.powerUps = [];
+    state.world.flag = null;
+    state.world.enemies = [
+      { type: 'hovermite', x: 200, y: 300, width: 40, height: 48, velocityX: -2, spawnTimer: 180, alive: true },
+      { type: 'orbitSkimmer', x: 240, y: 300, baseY: 300, width: 44, height: 42, velocityX: -2, dashTimer: 104, alive: true },
+    ];
+
+    const first = advanceSimulation(state, idle);
+    expect(first.sounds).toEqual(expect.arrayContaining(['playSpawn', 'playDash']));
+    const second = advanceSimulation(state, idle);
+    expect(second.sounds).not.toContain('playSpawn');
+    expect(second.sounds).not.toContain('playDash');
   });
 
   it('reports a sector clear and a final life loss from the same rules used by the page', () => {
