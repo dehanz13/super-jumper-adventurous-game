@@ -53,7 +53,7 @@ describe('game entry and first frame', () => {
 
   const paint = (canvas, item, x, y) => {
     selectItem(item);
-    fireEvent.mouseDown(canvas, { clientX: x, clientY: y });
+    fireEvent.pointerDown(canvas, { clientX: x, clientY: y });
   };
 
   beforeEach(() => {
@@ -183,13 +183,13 @@ describe('game entry and first frame', () => {
 
     for (const [index, item] of ['Terrain', 'Alloy Block', '?', 'Star Shard', 'Pebblit', 'Rollpod', 'Signal Snare', 'Prismite', 'Hovermite', 'Warden', 'Power Cell', 'Plasma Core', 'Spectrum Shield', 'Beacon'].entries()) {
       selectItem(item);
-      fireEvent.mouseDown(canvas, { clientX: 64 + index * 48, clientY: 320 });
+      fireEvent.pointerDown(canvas, { clientX: 64 + index * 48, clientY: 320 });
     }
     stepFrames(1);
     fireEvent.click(screen.getByRole('button', { name: 'Brush tool' }));
-    fireEvent.mouseMove(canvas, { buttons: 1, clientX: 96, clientY: 320 });
+    fireEvent.pointerMove(canvas, { buttons: 1, clientX: 96, clientY: 320 });
     fireEvent.click(screen.getByRole('button', { name: 'Eraser tool' }));
-    fireEvent.mouseDown(canvas, { clientX: 96, clientY: 320 });
+    fireEvent.pointerDown(canvas, { clientX: 96, clientY: 320 });
     fireEvent.click(screen.getByRole('button', { name: 'Toggle grid' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save level' }));
 
@@ -229,7 +229,7 @@ describe('game entry and first frame', () => {
     fireEvent.click(screen.getByText(/skip/i));
     fireEvent.click(screen.getByRole('button', { name: /level creator/i }));
     selectItem('Beacon');
-    fireEvent.mouseDown(container.querySelector('canvas'), { clientX: 96, clientY: 320 });
+    fireEvent.pointerDown(container.querySelector('canvas'), { clientX: 96, clientY: 320 });
     fireEvent.click(screen.getByRole('button', { name: /test/i }));
 
     stepFrames(1);
@@ -248,7 +248,7 @@ describe('game entry and first frame', () => {
     fireEvent.click(screen.getByText(/skip/i));
     fireEvent.click(screen.getByRole('button', { name: /level creator/i }));
     fireEvent.click(screen.getByRole('button', { name: 'Eraser tool' }));
-    fireEvent.mouseDown(container.querySelector('canvas'), { clientX: 100, clientY: 500 });
+    fireEvent.pointerDown(container.querySelector('canvas'), { clientX: 100, clientY: 500 });
     fireEvent.click(screen.getByRole('button', { name: /test/i }));
 
     for (let i = 0; i < 180 && !screen.queryByText('GAME OVER'); i++) stepFrames(1);
@@ -270,7 +270,7 @@ describe('game entry and first frame', () => {
     fireEvent.click(screen.getByText(/skip/i));
     fireEvent.click(screen.getByRole('button', { name: /level creator/i }));
     selectItem('Pebblit');
-    fireEvent.mouseDown(container.querySelector('canvas'), { clientX: 128, clientY: 448 });
+    fireEvent.pointerDown(container.querySelector('canvas'), { clientX: 128, clientY: 448 });
     fireEvent.click(screen.getByRole('button', { name: /test/i }));
 
     for (let i = 0; i < 50; i++) stepFrames(1);
@@ -304,9 +304,9 @@ describe('game entry and first frame', () => {
     fireEvent.click(screen.getByRole('button', { name: /level creator/i }));
     const canvas = container.querySelector('canvas');
     selectItem('?');
-    fireEvent.mouseDown(canvas, { clientX: 96, clientY: 352 });
+    fireEvent.pointerDown(canvas, { clientX: 96, clientY: 352 });
     selectItem('Power Cell');
-    fireEvent.mouseDown(canvas, { clientX: 96, clientY: 320 });
+    fireEvent.pointerDown(canvas, { clientX: 96, clientY: 320 });
     fireEvent.click(screen.getByRole('button', { name: /test/i }));
 
     fireEvent.keyDown(window, { code: 'ArrowRight' });
@@ -332,7 +332,7 @@ describe('game entry and first frame', () => {
     fireEvent.click(screen.getByText(/skip/i));
     fireEvent.click(screen.getByRole('button', { name: /level creator/i }));
     selectItem('Warden');
-    fireEvent.mouseDown(container.querySelector('canvas'), { clientX: 512, clientY: 448 });
+    fireEvent.pointerDown(container.querySelector('canvas'), { clientX: 512, clientY: 448 });
     fireEvent.click(screen.getByRole('button', { name: /test/i }));
 
     for (let i = 0; i < 190; i++) stepFrames(1);
@@ -348,7 +348,7 @@ describe('game entry and first frame', () => {
     fireEvent.click(screen.getByText(/skip/i));
     fireEvent.click(screen.getByRole('button', { name: /level creator/i }));
     selectItem('Hovermite');
-    fireEvent.mouseDown(container.querySelector('canvas'), { clientX: 160, clientY: 80 });
+    fireEvent.pointerDown(container.querySelector('canvas'), { clientX: 160, clientY: 80 });
     fireEvent.click(screen.getByRole('button', { name: /test/i }));
 
     for (let i = 0; i < 190; i++) stepFrames(1);
@@ -536,7 +536,7 @@ describe('game entry and first frame', () => {
 
   it('shows the editor cursor and pans with arrow keys', () => {
     const canvas = openEditor();
-    fireEvent.mouseMove(canvas, { clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(canvas, { clientX: 100, clientY: 100 });
     fireEvent.keyDown(window, { code: 'ArrowRight' });
     stepFrames(2);
     fireEvent.keyUp(window, { code: 'ArrowRight' });

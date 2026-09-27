@@ -320,10 +320,10 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
 
   useEffect(() => () => soundController.stopBGM(), []);
 
-  // Editor Mouse Handling
+  // Editor pointer handling works for mouse, pen, and touch.
   const mouseRef = useRef(null);
 
-  const handleCanvasClick = (e) => {
+  const placeEditorItem = (e) => {
     if (gameState !== 'editor') return;
 
     const canvas = canvasRef.current;
@@ -382,7 +382,14 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
     }
   };
 
-  const handleMouseMove = (e) => {
+  const handleCanvasPointerDown = (e) => {
+    if (gameState !== 'editor') return;
+    e.preventDefault();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    placeEditorItem(e);
+  };
+
+  const handleCanvasPointerMove = (e) => {
     if (gameState !== 'editor') return;
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
@@ -395,7 +402,7 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
 
     // Drag painting for blocks
     if (e.buttons === 1 && selectedTool === 'brush' && selectedItem.type === 'platform') {
-        handleCanvasClick(e);
+        placeEditorItem(e);
     }
   };
 
@@ -551,10 +558,11 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
             ref={canvasRef}
             width={800}
             height={600}
-            onMouseDown={handleCanvasClick}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={() => mouseRef.current = null}
-            className={`game-canvas bg-sky-300 block ${gameState === 'editor' ? 'cursor-none' : ''}`}
+            onPointerDown={handleCanvasPointerDown}
+            onPointerMove={handleCanvasPointerMove}
+            onPointerLeave={() => mouseRef.current = null}
+            onPointerCancel={() => mouseRef.current = null}
+            className={`game-canvas bg-sky-300 block ${gameState === 'editor' ? 'cursor-none touch-none' : ''}`}
             style={{ imageRendering: 'pixelated' }}
           />
 

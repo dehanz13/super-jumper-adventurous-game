@@ -222,6 +222,33 @@ test('level creator tools and grouped palette fit touch viewports', async ({ bro
   }
 });
 
+test('a finger drag paints multiple blocks in the level creator', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  await page.goto('/');
+  await page.getByText(/skip/i).click();
+  await page.getByRole('button', { name: /level creator/i }).click();
+
+  const y = 280;
+  const xPositions = [120, 160, 200, 240];
+  const tileColorAt = x => page.locator('canvas').evaluate((canvas, point) => {
+    const bounds = canvas.getBoundingClientRect();
+    const tileX = Math.floor(((point.x - bounds.left) * canvas.width / bounds.width) / 32) * 32;
+    const tileY = Math.floor(((point.y - bounds.top) * canvas.height / bounds.height) / 32) * 32;
+    return Array.from(canvas.getContext('2d').getImageData(tileX + 5, tileY + 5, 3, 1).data).slice(0, 3);
+  }, { x, y });
+  for (const x of xPositions) expect(await tileColorAt(x)).not.toEqual([119, 136, 172]);
+
+  const session = await context.newCDPSession(page);
+  await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ id: 1, x: xPositions[0], y }] });
+  for (let x = xPositions[0] + 10; x <= xPositions.at(-1); x += 10) {
+    await session.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ id: 1, x, y }] });
+  }
+  await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  for (const x of xPositions) await expect.poll(() => tileColorAt(x)).toEqual([119, 136, 172]);
+  await context.close();
+});
+
 test('dragging across the direction pad reverses movement', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'mobile viewport only');
   await page.goto('/');
