@@ -80,6 +80,13 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
   const playerRef = useRef(createPlayerState());
   const worldRef = useRef(createEmptyWorldState());
 
+  const clearHeldControls = useCallback(() => {
+    keysRef.current = {};
+    directionPointerRef.current = null;
+    jumpPointersRef.current.clear();
+    firePointersRef.current.clear();
+  }, []);
+
   const initLevel = useCallback(
     /** @param {number | 'custom'} levelNum */
     (levelNum = 1) => {
@@ -292,23 +299,29 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
       keysRef.current[e.code] = false;
     };
 
-    const handleBlur = () => {
-      keysRef.current = {};
-      directionPointerRef.current = null;
-      jumpPointersRef.current.clear();
-      firePointersRef.current.clear();
-    };
-
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
-    window.addEventListener('blur', handleBlur);
+    window.addEventListener('blur', clearHeldControls);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
-      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('blur', clearHeldControls);
     };
-  }, [gameState]);
+  }, [gameState, clearHeldControls]);
+
+  useEffect(() => {
+    if (gameState !== 'playing') return undefined;
+    const pauseWhenHidden = () => {
+      if (document.visibilityState !== 'hidden') return;
+      clearHeldControls();
+      soundController.stopBGM();
+      setGameState('paused');
+    };
+    document.addEventListener('visibilitychange', pauseWhenHidden);
+    pauseWhenHidden();
+    return () => document.removeEventListener('visibilitychange', pauseWhenHidden);
+  }, [gameState, clearHeldControls]);
 
   useEffect(() => {
     if (gameState === 'playing' || gameState === 'editor') {
