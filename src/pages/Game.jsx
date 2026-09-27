@@ -340,7 +340,7 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
     };
   }, [gameState, gameLoop]);
 
-  useEffect(() => () => soundController.stopBGM(), []);
+  useEffect(() => () => soundController.stopAll(), []);
 
   // Editor pointer handling works for mouse, pen, and touch.
   const mouseRef = useRef(null);
