@@ -70,12 +70,17 @@ export function stepPowerUps(powerUps, platforms, player) {
     if (powerUp.type === 'powerCell' && player.powerUp === 'small') {
       player.powerUp = 'big';
       player.height = 65;
-    } else if (powerUp.type === 'plasma') {
+    } else if (powerUp.type === 'plasma' && !player.armorTimer) {
       player.powerUp = 'plasma';
       player.height = 65;
     } else if (powerUp.type === 'spectrum') {
       player.starTimer = 600;
       player.isInvincible = true;
+    } else if (powerUp.type === 'armor') {
+      player.y -= 65 - player.height;
+      player.powerUp = 'armor';
+      player.height = 65;
+      player.armorTimer = 600;
     }
   });
   return collectedTypes;

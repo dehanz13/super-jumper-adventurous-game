@@ -20,9 +20,9 @@ export function currentRunVersions() {
 // Only that record selects a registered replay profile; the transcript must match it.
 export function verifyRankedCampaign({ run, transcript, claimedScore, nowMs }) {
   if (run?.status !== 'active') throw new RunVerificationError('run_not_active');
-  if (!isSubmissionCandidate(transcript)) throw new RunVerificationError('ineligible_transcript');
   const profile = resolveVerificationProfile(run.versions);
   if (!profile) throw new RunVerificationError('version_mismatch');
+  if (!isSubmissionCandidate(transcript, profile.versions)) throw new RunVerificationError('ineligible_transcript');
   for (const key of Object.keys(profile.versions)) {
     if (transcript[key] !== run.versions[key]) {
       throw new RunVerificationError('version_mismatch');
@@ -44,7 +44,7 @@ export function verifyRankedCampaign({ run, transcript, claimedScore, nowMs }) {
   } catch {
     throw new RunVerificationError('invalid_replay');
   }
-  if (replay.outcome !== 'win' || replay.level !== 3) {
+  if (replay.outcome !== 'win' || replay.level !== profile.finalLevel) {
     throw new RunVerificationError('incomplete_campaign');
   }
   if (claimedScore !== undefined && (!Number.isSafeInteger(claimedScore) || claimedScore !== replay.score)) {

@@ -58,4 +58,17 @@ describe('block and pickup outcomes', () => {
     expect(stepPowerUps([shield], [], explorer)).toEqual(['spectrum']);
     expect(explorer).toMatchObject({ starTimer: 600, isInvincible: true });
   });
+
+  it('grows Nova in armor for 600 steps and lets a visible heart be collected once', () => {
+    const armor = { x: 100, y: 100, type: 'armor', spawned: true, collected: false };
+    const heart = { x: 100, y: 100, type: 'heart', spawned: true, collected: false };
+    const explorer = player();
+    expect(stepPowerUps([armor, heart], [], explorer)).toEqual(['armor', 'heart']);
+    expect(explorer).toMatchObject({ y: 85, powerUp: 'armor', height: 65, armorTimer: 600 });
+    expect(stepPowerUps([armor, heart], [], explorer)).toEqual([]);
+    const grounded = player({ y: 450 });
+    const armorOnGround = { x: 100, y: 458, type: 'armor', spawned: true, collected: false };
+    stepPowerUps([armorOnGround], [], grounded);
+    expect(grounded.y + grounded.height).toBe(500);
+  });
 });

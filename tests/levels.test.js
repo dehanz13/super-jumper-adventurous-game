@@ -5,16 +5,16 @@ import { alignGroundEnemy } from '../src/game/geometry';
 
 describe('playable level registry', () => {
   it('pins the authored maps to a content version for replay', () => {
-    const maps = [1, 2, 3].map(getLevelData);
+    const maps = [1, 2, 3, 4, 5, 6, 7].map(getLevelData);
     const digest = createHash('sha256').update(JSON.stringify(maps)).digest('hex');
     expect(LEVEL_SET_VERSION).toBe(`sha256:${digest}`);
     expect(Object.isFrozen(maps[0])).toBe(true);
     expect(Object.isFrozen(maps[0].platforms[0])).toBe(true);
   });
-  it('loads the three current sectors in order', () => {
-    expect([1, 2, 3].map(number => getLevelData(number).name))
-      .toEqual(['Launch Fields', 'Crystal Caverns', 'Orbital Spires']);
-    for (const number of [1, 2, 3]) {
+  it('loads the seven current sectors in order', () => {
+    expect([1, 2, 3, 4, 5, 6, 7].map(number => getLevelData(number).name))
+      .toEqual(['Launch Fields', 'Crystal Caverns', 'Orbital Spires', 'Aurora Outpost', 'Nebula Foundry', 'Comet Relay', 'Event Horizon']);
+    for (const number of [1, 2, 3, 4, 5, 6, 7]) {
       const level = getLevelData(number);
       expect(level.platforms.length).toBeGreaterThan(0);
       expect(level.flag.x).toBeGreaterThan(level.platforms[0].x);
@@ -24,8 +24,9 @@ describe('playable level registry', () => {
   it('advances only through available sectors', () => {
     expect(hasNextLevel(1)).toBe(true);
     expect(hasNextLevel(2)).toBe(true);
-    expect(hasNextLevel(3)).toBe(false);
-    expect(() => getLevelData(4)).toThrow(RangeError);
+    expect(hasNextLevel(3)).toBe(true);
+    expect(hasNextLevel(7)).toBe(false);
+    expect(() => getLevelData(8)).toThrow(RangeError);
     expect(() => getLevelData(1.5)).toThrow(RangeError);
   });
 
@@ -58,5 +59,19 @@ describe('playable level registry', () => {
       && platform.x + platform.width > level.flag.x
       && platform.y + platform.height < warden.y);
     expect(bypass).toBeDefined();
+  });
+
+  it('adds one heart per new sector and increases enemy counts with distinct abilities', () => {
+    let previousCount = getLevelData(3).enemies.length;
+    for (const number of [4, 5, 6, 7]) {
+      const level = getLevelData(number);
+      expect(level.powerUps.filter(item => item.type === 'heart')).toHaveLength(1);
+      expect(level.powerUps.some(item => item.type === 'armor')).toBe(true);
+      expect(level.enemies.length).toBeGreaterThan(previousCount);
+      for (const type of ['skitter', 'orbitSkimmer', 'pulseDrone']) {
+        expect(level.enemies.some(enemy => enemy.type === type)).toBe(true);
+      }
+      previousCount = level.enemies.length;
+    }
   });
 });

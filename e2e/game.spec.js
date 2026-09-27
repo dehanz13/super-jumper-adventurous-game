@@ -59,20 +59,23 @@ test('the second sector advances to sector three', async ({ page, isMobile }) =>
   await page.keyboard.up('ArrowRight');
 });
 
-test('the third sector can finish the current campaign', async ({ page, isMobile }) => {
+test('the seven-sector campaign can be completed with keyboard controls', async ({ page, isMobile }) => {
   test.skip(isMobile, 'the full keyboard route is covered on desktop; mobile touch is tested separately');
-  test.setTimeout(100_000);
+  test.setTimeout(210_000);
   await page.goto('/');
   await page.getByText(/skip/i).click();
   await page.getByRole('button', { name: /press start/i }).click();
 
   await page.keyboard.down('ArrowRight');
   await page.keyboard.down('Space');
-  await expect(page.getByText('GET READY FOR SECTOR 2-1')).toBeVisible({ timeout: 35_000 });
-  await page.getByRole('button', { name: /next sector/i }).click();
-  await expect(page.getByText('GET READY FOR SECTOR 3-1')).toBeVisible({ timeout: 35_000 });
-  await page.getByRole('button', { name: /next sector/i }).click();
-  await expect(page.getByText('ALL SECTORS CLEARED!')).toBeVisible({ timeout: 40_000 });
+  for (let sector = 2; sector <= 7; sector++) {
+    await expect(page.getByText(`GET READY FOR SECTOR ${sector}-1`)).toBeVisible({ timeout: 45_000 });
+    await page.getByRole('button', { name: /next sector/i }).click();
+    if (sector === 4) {
+      await expect(page.getByText('LIVES').locator('..')).toContainText('×2', { timeout: 25_000 });
+    }
+  }
+  await expect(page.getByText('ALL SECTORS CLEARED!')).toBeVisible({ timeout: 45_000 });
   await page.keyboard.up('Space');
   await page.keyboard.up('ArrowRight');
 });

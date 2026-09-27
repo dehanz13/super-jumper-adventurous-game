@@ -13,7 +13,7 @@ function completedCampaign() {
   const transcript = createInputTranscript();
   const input = { left: false, right: true, jump: true, fire: false };
   let outcome = null;
-  for (let step = 0; step < 3000; step++) {
+  for (let step = 0; step < 12000; step++) {
     if (outcome === 'levelcomplete') {
       const next = createInitialLevelState(state.level + 1);
       state.player = next.player;

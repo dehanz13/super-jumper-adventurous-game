@@ -59,6 +59,36 @@ export function drawPickup(ctx, pickup, offset) {
     ctx.fill();
     ctx.fillStyle = LIGHT;
     ctx.fillRect(x - 2, y - 2, 4, 4);
+  } else if (pickup.type === 'armor') {
+    ctx.fillStyle = INK;
+    ctx.fillRect(x - 14, y - 14, 28, 28);
+    ctx.fillStyle = TEAL;
+    ctx.fillRect(x - 11, y - 11, 22, 22);
+    ctx.fillStyle = VIOLET;
+    ctx.fillRect(x - 7, y - 8, 14, 15);
+    ctx.fillStyle = GOLD;
+    ctx.fillRect(x - 10, y - 5, 4, 8);
+    ctx.fillRect(x + 6, y - 5, 4, 8);
+    ctx.fillRect(x - 4, y + 8, 8, 3);
+    ctx.fillStyle = LIGHT;
+    ctx.fillRect(x - 4, y - 5, 8, 4);
+  } else if (pickup.type === 'heart') {
+    ctx.fillStyle = INK;
+    ctx.fillRect(x - 11, y - 12, 8, 4);
+    ctx.fillRect(x + 3, y - 12, 8, 4);
+    ctx.fillRect(x - 14, y - 8, 28, 12);
+    ctx.fillRect(x - 11, y + 4, 22, 5);
+    ctx.fillRect(x - 8, y + 9, 16, 4);
+    ctx.fillRect(x - 4, y + 13, 8, 4);
+    ctx.fillStyle = '#F38173';
+    ctx.fillRect(x - 10, y - 9, 7, 5);
+    ctx.fillRect(x + 3, y - 9, 7, 5);
+    ctx.fillRect(x - 11, y - 4, 22, 7);
+    ctx.fillRect(x - 8, y + 3, 16, 5);
+    ctx.fillRect(x - 5, y + 8, 10, 4);
+    ctx.fillRect(x - 2, y + 12, 4, 3);
+    ctx.fillStyle = LIGHT;
+    ctx.fillRect(x - 8, y - 7, 3, 3);
   }
 }
 
@@ -143,6 +173,10 @@ export function drawSpaceBackdrop(ctx, offset, level) {
     1: ['#13254C', '#3B5A8F'],
     2: ['#130F2E', '#3F325D'],
     3: ['#20416D', '#7B87BA'],
+    4: ['#153A5C', '#39728C'],
+    5: ['#251635', '#795077'],
+    6: ['#102E4C', '#426F9C'],
+    7: ['#1B153F', '#59448F'],
   };
   const [top, bottom] = palettes[level] || palettes[1];
   const gradient = ctx.createLinearGradient(0, 0, 0, 600);

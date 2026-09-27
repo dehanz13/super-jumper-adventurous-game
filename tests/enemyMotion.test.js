@@ -76,4 +76,23 @@ describe('fixed step enemy motion', () => {
     stepEnemyMotion(pebblit, explorer, ground, [pebblit]);
     expect(pebblit).toMatchObject({ x: 502, velocityX: -2 });
   });
+
+  it('makes a skitter chase, an orbit skimmer dash, and a pulse drone fire', () => {
+    const skitter = { type: 'skitter', x: 160, y: 460, width: 42, height: 40, velocityX: -2.8 };
+    stepEnemyMotion(skitter, explorer, ground, [skitter]);
+    expect(skitter.velocityX).toBeLessThanOrEqual(-3);
+    expect(skitter.x).toBeLessThan(160);
+
+    const skimmer = { type: 'orbitSkimmer', x: 200, y: 315, baseY: 315, width: 44, height: 42, velocityX: -2, timer: 0, dashTimer: 104 };
+    stepEnemyMotion(skimmer, explorer, ground, [skimmer]);
+    expect(skimmer.x).toBe(194);
+    expect(skimmer.y).not.toBe(315);
+    expect(skimmer.dashTicks).toBe(13);
+
+    const drone = { type: 'pulseDrone', x: 200, y: 452, width: 46, height: 48, fireTimer: 99, fireInterval: 100 };
+    expect(stepEnemyMotion(drone, explorer, ground, [drone]).projectile)
+      .toMatchObject({ type: 'plasma', velocityX: -5, x: 170 });
+    expect(drone.fireTimer).toBe(0);
+    expect(stepEnemyMotion(drone, { x: 1000 }, ground, [drone]).projectile).toBeNull();
+  });
 });

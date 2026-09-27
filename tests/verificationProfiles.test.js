@@ -7,7 +7,7 @@ import { currentVerificationProfile, resolveVerificationProfile } from '../src/g
 describe('released campaign verifier profile', () => {
   it('pins the exact serialized level maps used by the current replay', () => {
     const levelHash = createHash('sha256')
-      .update(JSON.stringify([1, 2, 3].map(getLevelData)))
+      .update(JSON.stringify([1, 2, 3, 4, 5, 6, 7].map(getLevelData)))
       .digest('hex');
     expect(LEVEL_SET_VERSION).toBe(`sha256:${levelHash}`);
   });
@@ -21,5 +21,10 @@ describe('released campaign verifier profile', () => {
     expect(resolveVerificationProfile(versions)).toBeNull();
     expect(currentRunVersions()).toEqual(profile.versions);
     expect(resolveVerificationProfile({ ...profile.versions, levelSetVersion: 'sha256:unknown' })).toBeNull();
+    const legacy = resolveVerificationProfile({
+      levelSetVersion: 'sha256:2e77fac2230965b7a25f8e4234f154f9e2974be8ba1583303dcf649ba233bb5b',
+      rulesVersion: 1, scoringVersion: 1,
+    });
+    expect(legacy.finalLevel).toBe(3);
   });
 });

@@ -17,7 +17,7 @@ export function createPlayerState() {
     velocityX: 0, velocityY: 0, onGround: false,
     facingRight: true, isJumping: false, frame: 0,
     powerUp: 'small', isInvincible: false, invincibleTimer: 0,
-    starTimer: 0, fireballCooldown: 0, fireballs: [],
+    starTimer: 0, armorTimer: 0, fireballCooldown: 0, fireballs: [],
   };
 }
 
@@ -39,7 +39,7 @@ export function createInitialLevelState(levelNumber, customLevel = null) {
     powerUps: (levelData.powerUps || []).map(powerUp => ({
       ...powerUp,
       collected: false,
-      spawned: isCustom ? Boolean(powerUp.spawned) : false,
+      spawned: Boolean(powerUp.spawned),
       velocityY: 0,
     })),
     enemyProjectiles: [],

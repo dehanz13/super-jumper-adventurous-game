@@ -54,13 +54,15 @@ export function sealInputTranscript(transcript, outcome) {
   transcript.endedAs = outcome;
 }
 
-export function validateInputTranscript(transcript) {
+export function validateInputTranscript(transcript, expectedVersions = {
+  levelSetVersion: LEVEL_SET_VERSION, rulesVersion: GAME_RULES_VERSION, scoringVersion: SCORING_VERSION,
+}) {
   if (!transcript || typeof transcript !== 'object'
     || transcript.version !== INPUT_TRANSCRIPT_VERSION
     || (transcript.mode !== 'campaign' && transcript.mode !== 'custom')
-    || transcript.levelSetVersion !== (transcript.mode === 'campaign' ? LEVEL_SET_VERSION : null)
-    || transcript.rulesVersion !== GAME_RULES_VERSION
-    || transcript.scoringVersion !== SCORING_VERSION
+    || transcript.levelSetVersion !== (transcript.mode === 'campaign' ? expectedVersions.levelSetVersion : null)
+    || transcript.rulesVersion !== expectedVersions.rulesVersion
+    || transcript.scoringVersion !== expectedVersions.scoringVersion
     || (transcript.endedAs !== null && transcript.endedAs !== 'win' && transcript.endedAs !== 'gameover')
     || transcript.truncated
     || !Number.isSafeInteger(transcript.steps) || transcript.steps < 0 || transcript.steps > MAX_INPUT_STEPS
@@ -84,17 +86,17 @@ export function validateInputTranscript(transcript) {
 }
 
 // This is a client-side precheck only; the server must replay every candidate.
-export function isSubmissionCandidate(transcript) {
+export function isSubmissionCandidate(transcript, expectedVersions) {
   if (!transcript || transcript.mode !== 'campaign' || transcript.endedAs !== 'win' || transcript.steps === 0) return false;
   try {
-    return validateInputTranscript(transcript);
+    return validateInputTranscript(transcript, expectedVersions);
   } catch {
     return false;
   }
 }
 
-export function* replayInputTranscript(transcript) {
-  validateInputTranscript(transcript);
+export function* replayInputTranscript(transcript, expectedVersions) {
+  validateInputTranscript(transcript, expectedVersions);
   for (const [mask, count] of transcript.segments) {
     for (let step = 0; step < count; step++) yield decodeInput(mask);
   }

@@ -36,8 +36,10 @@ export function resolvePlayerDamage(player) {
   if (player.isInvincible || player.starTimer > 0) return null;
   if (player.powerUp === 'small') return { loseLife: true };
 
+  if (player.armorTimer > 0) player.y += player.height - 50;
   player.powerUp = 'small';
   player.height = 50;
+  player.armorTimer = 0;
   player.isInvincible = true;
   player.invincibleTimer = 120;
   return { sound: 'playDamage' };
@@ -51,6 +53,14 @@ export function resolvePlayerEnemyContact(player, enemy) {
     return { scoreEvent: event, sound };
   };
   const bounce = () => { player.velocityY = JUMP_FORCE / 2; };
+
+  if (player.armorTimer > 0) {
+    const stomp = player.velocityY > 0 && player.y + player.height < enemy.y + enemy.height / 2;
+    if (stomp) bounce();
+    if (enemy.type === 'warden') enemy.hp = 0;
+    return defeat(enemy.type === 'warden' ? 'wardenDefeat'
+      : enemy.type === 'hovermite' ? 'hovermiteDefeat' : 'creatureDefeat', stomp ? 'playStomp' : 'playKick');
+  }
 
   if (enemy.type === 'hovermite') {
     if (player.velocityY > 0 && player.y + player.height < enemy.y + 30) {

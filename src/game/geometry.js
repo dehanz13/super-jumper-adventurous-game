@@ -40,6 +40,9 @@ const CREATURE_INSETS = {
   prismite: { left: 2, right: 0, top: 0, bottom: 0 },
   hovermite: { left: -2, right: -2, top: 7, bottom: 9 },
   warden: { left: 2, right: 2, top: 4, bottom: 0 },
+  skitter: { left: 2, right: 2, top: 6, bottom: 0 },
+  orbitSkimmer: { left: -2, right: -2, top: 6, bottom: 6 },
+  pulseDrone: { left: 3, right: 3, top: 3, bottom: 0 },
 };
 
 export function creatureHurtbox(creature) {
@@ -70,7 +73,7 @@ export function beaconFinishBounds(beacon) {
   };
 }
 
-const GROUND_ENEMIES = new Set(['pebblit', 'rollpod', 'prismite']);
+const GROUND_ENEMIES = new Set(['pebblit', 'rollpod', 'prismite', 'skitter', 'pulseDrone']);
 
 const CREATURE_DIMENSIONS = {
   pebblit: { width: 40, height: 40 },
@@ -79,6 +82,9 @@ const CREATURE_DIMENSIONS = {
   signalSnare: { width: 48, height: 64 },
   hovermite: { width: 40, height: 48 },
   warden: { width: 64, height: 64 },
+  skitter: { width: 42, height: 40 },
+  orbitSkimmer: { width: 44, height: 42 },
+  pulseDrone: { width: 46, height: 48 },
 };
 
 export function createEditorCreature(type, gridX, gridY) {
@@ -94,6 +100,8 @@ export function createEditorCreature(type, gridX, gridY) {
     ...(type === 'signalSnare' ? { baseY: gridY, timer: 0 } : {}),
     ...(type === 'warden' ? { hp: 5, maxHp: 5, fireTimer: 0, jumpTimer: 0, facingLeft: true } : {}),
     ...(type === 'rollpod' ? { isShell: false, shellVelocity: 0 } : {}),
+    ...(type === 'orbitSkimmer' ? { baseY: gridY + 32 - dimensions.height, timer: 0, dashTimer: 0 } : {}),
+    ...(type === 'pulseDrone' ? { fireTimer: 0, fireInterval: 140 } : {}),
   };
 }
 

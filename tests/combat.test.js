@@ -94,4 +94,21 @@ describe('player contact outcomes', () => {
     expect(resolvePlayerEnemyContact(player({ starTimer: 1 }), enemy('hovermite')))
       .toEqual({ scoreEvent: 'hovermiteDefeat', sound: 'playKick' });
   });
+
+  it('lets armored Nova defeat ordinary, aerial, and boss creatures by contact', () => {
+    const armored = player({ powerUp: 'armor', height: 65, armorTimer: 100 });
+    expect(resolvePlayerEnemyContact(armored, enemy('prismite')))
+      .toEqual({ scoreEvent: 'creatureDefeat', sound: 'playKick' });
+    expect(resolvePlayerEnemyContact(armored, enemy('hovermite')))
+      .toEqual({ scoreEvent: 'hovermiteDefeat', sound: 'playKick' });
+    const warden = enemy('warden', { hp: 10 });
+    expect(resolvePlayerEnemyContact(armored, warden))
+      .toEqual({ scoreEvent: 'wardenDefeat', sound: 'playKick' });
+    expect(warden).toMatchObject({ hp: 0, alive: false });
+    const stomp = player({ powerUp: 'armor', armorTimer: 1, velocityY: 6, y: 0 });
+    expect(resolvePlayerEnemyContact(stomp, enemy('pebblit'))?.sound).toBe('playStomp');
+    expect(stomp.velocityY).toBeLessThan(0);
+    expect(resolvePlayerDamage(armored)).toEqual({ sound: 'playDamage' });
+    expect(armored).toMatchObject({ powerUp: 'small', height: 50, armorTimer: 0 });
+  });
 });
