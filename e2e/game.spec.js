@@ -28,6 +28,22 @@ test('a player can start, pause, and resume a world', async ({ page }) => {
   await expect(page.getByText('PAUSED')).toBeHidden();
 });
 
+test('the start button accepts Space from the keyboard', async ({ page }) => {
+  await page.goto('/');
+  await page.getByText(/skip/i).click();
+  await page.getByRole('button', { name: /press start/i }).focus();
+  await page.keyboard.press('Space');
+
+  const pause = page.getByRole('button', { name: 'Pause game' });
+  await expect(pause).toBeVisible();
+  await pause.focus();
+  await page.keyboard.press('Space');
+  await expect(page.getByText('PAUSED')).toBeVisible();
+  await page.getByRole('button', { name: /continue/i }).focus();
+  await page.keyboard.press('Space');
+  await expect(page.getByText('PAUSED')).toBeHidden();
+});
+
 test('the first sector can be completed with keyboard controls', async ({ page, isMobile }) => {
   test.skip(isMobile, 'the full keyboard route is covered on desktop; mobile touch is tested separately');
   test.setTimeout(45_000);

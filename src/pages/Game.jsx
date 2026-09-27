@@ -276,6 +276,12 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
 
   useEffect(() => {
     const handleKeyDown = (e) => {
+      if (gameState !== 'playing' && gameState !== 'editor') return;
+      const target = e.target;
+      if (target instanceof Element && (
+        target.closest('input, textarea, select, [contenteditable]')
+        || (e.code === 'Space' && target.closest('button, [role="button"]') && !target.closest('.touch-controls'))
+      )) return;
       keysRef.current[e.code] = true;
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
         e.preventDefault();
@@ -302,7 +308,7 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('blur', handleBlur);
     };
-  }, []);
+  }, [gameState]);
 
   useEffect(() => {
     if (gameState === 'playing' || gameState === 'editor') {
