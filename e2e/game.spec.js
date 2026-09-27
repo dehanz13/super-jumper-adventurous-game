@@ -208,6 +208,7 @@ test('level creator tools and grouped palette fit touch viewports', async ({ bro
         scrollWidth: document.documentElement.scrollWidth,
         scrollHeight: document.documentElement.scrollHeight,
         stage: box('.game-stage'),
+        stageScrollLeft: document.querySelector('.game-stage').scrollLeft,
         tools: box('.editor-tools'),
         palette: box('.editor-palette'),
         controls: box('.touch-controls'),
@@ -215,6 +216,9 @@ test('level creator tools and grouped palette fit touch viewports', async ({ bro
     });
     expect(layout.scrollWidth).toBeLessThanOrEqual(width);
     expect(layout.scrollHeight).toBeLessThanOrEqual(height);
+    expect(layout.stageScrollLeft).toBe(0);
+    expect(layout.tools.left).toBeGreaterThanOrEqual(layout.stage.left);
+    expect(layout.palette.left).toBeGreaterThanOrEqual(layout.stage.left);
     expect(layout.tools.bottom).toBeLessThan(layout.palette.top);
     expect(layout.palette.bottom).toBeLessThanOrEqual(layout.stage.bottom);
     expect(layout.controls.top).toBeGreaterThanOrEqual(layout.stage.bottom);
