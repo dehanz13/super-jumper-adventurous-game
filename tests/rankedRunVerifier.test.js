@@ -5,9 +5,9 @@ import { advanceSimulation, createSimulationState } from '../src/game/simulation
 import { createInitialLevelState } from '../src/game/worldState';
 import { resolveVerificationProfile } from '../src/game/verificationProfiles';
 
-function completedCampaign() {
+function completedCampaign(versions = currentRunVersions(), legacyGrowth = false) {
   const state = createSimulationState();
-  const transcript = createInputTranscript();
+  const transcript = { ...createInputTranscript(), ...versions };
   const input = { left: false, right: true, jump: true, fire: false };
   let outcome = null;
   for (let i = 0; i < 12000; i++) {
@@ -19,7 +19,7 @@ function completedCampaign() {
       state.runEnded = false;
     }
     appendInputStep(transcript, input);
-    outcome = advanceSimulation(state, input).transition?.state || null;
+    outcome = advanceSimulation(state, input, legacyGrowth).transition?.state || null;
     if (outcome === 'win') break;
   }
   expect(outcome).toBe('win');
@@ -100,5 +100,16 @@ describe('ranked campaign verifier', () => {
     const finishedAt = Math.ceil(oldTranscript.steps * 1000 / 60) + 1000;
     expect(verifyRankedCampaign({ run: oldRun, transcript: oldTranscript, nowMs: finishedAt }).score)
       .toBe(state.ledger.total);
+  });
+
+  it('verifies a seven-sector run pinned to the previous growth rules', () => {
+    const versions = { ...currentRunVersions(), rulesVersion: 2 };
+    const oldRun = { ...run, versions };
+    const completed = completedCampaign(versions, true);
+    const finishedAt = Math.ceil(completed.transcript.steps * 1000 / 60) + 1000;
+
+    expect(verifyRankedCampaign({
+      run: oldRun, transcript: completed.transcript, claimedScore: completed.score, nowMs: finishedAt,
+    }).score).toBe(completed.score);
   });
 });

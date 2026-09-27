@@ -1,6 +1,11 @@
 import { rectanglesOverlap } from './geometry';
 import { GRAVITY } from './playerPhysics';
 
+function growPlayer(player) {
+  player.y -= 65 - player.height;
+  player.height = 65;
+}
+
 export function resolveBlockHit(platform, powerUps) {
   if (platform.type === 'brick') return { kind: 'brickBump' };
   if (platform.type !== 'question') return null;
@@ -38,7 +43,7 @@ export function collectShards(coins, player) {
   return collected;
 }
 
-export function stepPowerUps(powerUps, platforms, player) {
+export function stepPowerUps(powerUps, platforms, player, legacyGrowth = false) {
   const collectedTypes = [];
   powerUps.forEach(powerUp => {
     if (powerUp.collected || !powerUp.spawned) return;
@@ -69,17 +74,18 @@ export function stepPowerUps(powerUps, platforms, player) {
 
     if (powerUp.type === 'powerCell' && player.powerUp === 'small') {
       player.powerUp = 'big';
-      player.height = 65;
+      if (legacyGrowth) player.height = 65;
+      else growPlayer(player);
     } else if (powerUp.type === 'plasma' && !player.armorTimer) {
       player.powerUp = 'plasma';
-      player.height = 65;
+      if (legacyGrowth) player.height = 65;
+      else growPlayer(player);
     } else if (powerUp.type === 'spectrum') {
       player.starTimer = 600;
       player.isInvincible = true;
     } else if (powerUp.type === 'armor') {
-      player.y -= 65 - player.height;
+      growPlayer(player);
       player.powerUp = 'armor';
-      player.height = 65;
       player.armorTimer = 600;
     }
   });

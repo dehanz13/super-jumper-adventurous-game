@@ -6,6 +6,38 @@ import { createInitialLevelState } from '../src/game/worldState';
 const idle = { left: false, right: false, jump: false, fire: false };
 
 describe('shared campaign simulation', () => {
+  it.each(['powerCell', 'plasma'])('keeps Nova grounded and able to jump after collecting %s', type => {
+    const state = createSimulationState();
+    state.world.platforms = [{ x: 0, y: 500, width: 800, height: 100, type: 'ground' }];
+    state.world.enemies = [];
+    state.world.coins = [];
+    state.world.flag = null;
+    state.world.powerUps = [{ x: 100, y: 458, type, spawned: true, collected: false }];
+    state.player.y = 450;
+    state.player.onGround = true;
+
+    advanceSimulation(state, idle);
+    expect(state.player).toMatchObject({ height: 65, y: 435, onGround: true });
+    for (let step = 0; step < 10; step++) advanceSimulation(state, idle);
+    expect(state.player.y + state.player.height).toBe(500);
+    expect(state.player.onGround).toBe(true);
+    expect(advanceSimulation(state, { ...idle, jump: true }).sounds).toContain('playJump');
+  });
+
+  it('preserves the old pickup position for runs replayed under earlier rules', () => {
+    const state = createSimulationState();
+    state.world.platforms = [{ x: 0, y: 500, width: 800, height: 100, type: 'ground' }];
+    state.world.enemies = [];
+    state.world.coins = [];
+    state.world.flag = null;
+    state.world.powerUps = [{ x: 100, y: 458, type: 'plasma', spawned: true, collected: false }];
+    state.player.y = 450;
+    state.player.onGround = true;
+
+    advanceSimulation(state, idle, true);
+    expect(state.player).toMatchObject({ height: 65, y: 450 });
+  });
+
   it('awards pickups and returns presentation events without drawing or audio', () => {
     const state = createSimulationState();
     state.player.x = 310;
