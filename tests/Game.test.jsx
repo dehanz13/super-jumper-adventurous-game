@@ -163,6 +163,28 @@ describe('game entry and first frame', () => {
     expect(soundController.stopBGM).toHaveBeenCalledTimes(1);
   });
 
+  it('pauses a hidden run and clears controls before the player resumes', () => {
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    render(<Game />);
+    fireEvent.click(screen.getByText(/skip/i));
+    fireEvent.click(screen.getByRole('button', { name: /press start/i }));
+    stepFrames(30);
+    fireEvent.keyDown(window, { code: 'Space' });
+
+    visibility.mockReturnValue('hidden');
+    fireEvent(document, new Event('visibilitychange'));
+    expect(screen.getByText('PAUSED')).toBeInTheDocument();
+    expect(soundController.stopBGM).toHaveBeenCalledTimes(1);
+
+    visibility.mockReturnValue('visible');
+    fireEvent(document, new Event('visibilitychange'));
+    expect(screen.getByText('PAUSED')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    stepFrames(1);
+    expect(soundController.playJump).not.toHaveBeenCalled();
+    expect(soundController.playBGM).toHaveBeenCalledTimes(2);
+  });
+
   it('switches the animation loop into editor drawing mode', () => {
     render(<Game />);
     fireEvent.click(screen.getByText(/skip/i));

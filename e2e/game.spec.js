@@ -327,6 +327,28 @@ test('dragging across the direction pad reverses movement', async ({ page, isMob
   await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
 });
 
+test('a hidden-tab visibility event pauses play until the player continues', async ({ page }) => {
+  await page.goto('/');
+  await page.getByText(/skip/i).click();
+  await page.getByRole('button', { name: /press start/i }).click();
+  await expect(page.getByRole('button', { name: 'Pause game' })).toBeVisible();
+
+  // Headless Chromium keeps every Playwright page visible, so dispatch the browser event explicitly.
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(page.getByText('PAUSED')).toBeVisible();
+
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(page.getByText('PAUSED')).toBeVisible();
+  await page.getByRole('button', { name: /continue/i }).click();
+  await expect(page.getByRole('button', { name: 'Pause game' })).toBeVisible();
+});
+
 test('keyboard and touch direction holds survive the other source releasing', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'mobile viewport only');
   await page.goto('/');
