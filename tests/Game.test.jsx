@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Game from '../src/pages/Game';
 import { soundController } from '../src/components/SoundController';
 import { currentRunVersions } from '../src/game/rankedRunVerifier';
+import { EDITOR_DRAFT_KEY } from '../src/game/editorDraft';
 
 vi.mock('../src/components/SoundController', () => ({
   soundController: {
@@ -59,6 +60,7 @@ describe('game entry and first frame', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.removeItem(EDITOR_DRAFT_KEY);
     soundController.isMuted = false;
     soundController.toggleMute.mockImplementation(() => {
       soundController.isMuted = !soundController.isMuted;
@@ -231,6 +233,7 @@ describe('game entry and first frame', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save level' }));
 
     expect(window.alert).toHaveBeenCalled();
+    expect(JSON.parse(window.localStorage.getItem(EDITOR_DRAFT_KEY)).level.platforms.length).toBeGreaterThan(1);
     fireEvent.click(screen.getByRole('button', { name: /test/i }));
     stepFrames(3);
     expect(screen.queryByText('TOOLS')).not.toBeInTheDocument();
