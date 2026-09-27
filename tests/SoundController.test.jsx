@@ -45,6 +45,9 @@ describe('game audio', () => {
     soundController.playStomp();
     soundController.playFireball();
     soundController.playPowerUp();
+    soundController.playSpawn();
+    soundController.playDash();
+    soundController.playArmorExpire();
     soundController.playLife();
     soundController.playBump();
     soundController.playKick();
