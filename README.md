@@ -19,7 +19,7 @@ npm run dev
 
 The static site builds and serves locally without an account or backend. The explorer, creatures, pickups, terrain, and opening screen use original space-themed presentation. Keyboard and touch controls are covered by desktop and mobile browser tests. A new run starts at Level 1 and progresses through seven level maps. Level 1 teaches movement on continuous ground; Levels 2 and 3 add gap crossings and elevated routes; Levels 4–7 add temporary armor, one heart per sector, more blocks, and three new creature abilities. Gameplay calibration and visual tuning continue.
 
-Level layouts live in `src/game/levels/`, while character and environment drawing live in `src/game/characterArt.js` and `src/game/worldArt.js`. This keeps future artwork and level changes separate from the gameplay loop. Custom editor levels remain in the current browser session; they are not persisted. Without a configured run API, scores remain local.
+Level layouts live in `src/game/levels/`, while character and environment drawing live in `src/game/characterArt.js` and `src/game/worldArt.js`. This keeps future artwork and level changes separate from the gameplay loop. The Level Creator saves one custom draft in this browser when you select Save or Test. Clearing browser data removes that draft; custom levels are not synced to an account or ranked. Without a configured run API, scores remain local.
 
 Visible contact bounds and editor creature sizes live in `src/game/geometry.js`. Platform footing uses the larger movement box; creature and projectile hits use bounds sized to the artwork. When replacing a character illustration, update its geometry there as part of the asset change.
 

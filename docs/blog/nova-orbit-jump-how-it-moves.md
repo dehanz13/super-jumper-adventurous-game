@@ -2,7 +2,7 @@
 
 Nova’s Orbit Jump is a single-player browser platform game about crossing a series of space-themed courses. You guide a small explorer through star shards, moving creatures, elevated paths, and gaps to reach each sector’s beacon. The current campaign has seven sectors: Launch Fields, Crystal Caverns, Orbital Spires, Aurora Outpost, Nebula Foundry, Comet Relay, and Event Horizon. Each new campaign begins in Launch Fields and moves through them in order.
 
-The first course has continuous ground, so there is room to learn the controls. The second adds gaps and alternate platform routes. The third asks for more precise jumps and ends near the Warden. Sectors 4–7 add longer routes, more blocks, faster and ranged creatures, temporary armor, and one heart per sector. Event Horizon brings the Warden back near the final beacon. The beacon is the goal; fighting every creature or collecting every shard is optional. A Level Creator also lets players test their own layouts in the current session; custom maps are not saved between visits or ranked.
+The first course has continuous ground, so there is room to learn the controls. The second adds gaps and alternate platform routes. The third asks for more precise jumps and ends near the Warden. Sectors 4–7 add longer routes, more blocks, faster and ranged creatures, temporary armor, and one heart per sector. Event Horizon brings the Warden back near the final beacon. The beacon is the goal; fighting every creature or collecting every shard is optional. A Level Creator also lets players test their own layouts. Saving keeps one custom draft in the same browser between visits; custom maps are not synced to an account or ranked.
 
 ## One set of controls, one movement rule
 

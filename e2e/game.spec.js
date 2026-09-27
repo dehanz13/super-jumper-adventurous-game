@@ -269,6 +269,33 @@ test('a finger drag paints multiple blocks in the level creator', async ({ brows
   await context.close();
 });
 
+test('a saved custom block remains after a page reload', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'the reload contract is device independent; mobile editor input is covered separately');
+  await page.goto('/');
+  await page.getByText(/skip/i).click();
+  await page.getByRole('button', { name: /level creator/i }).click();
+
+  const canvas = page.locator('canvas');
+  const bounds = await canvas.boundingBox();
+  const point = { x: bounds.width * 0.5, y: bounds.height * 0.4 };
+  await canvas.click({ position: point });
+  const messages = [];
+  page.on('dialog', async dialog => { messages.push(dialog.message()); await dialog.accept(); });
+  await page.getByRole('button', { name: 'Save level' }).click();
+  expect(messages).toEqual([expect.stringContaining('saved in this browser')]);
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('nova-orbit-jump.editor-draft.v1')));
+  const block = saved.level.platforms.find(item => item.type === 'brick');
+  expect(block).toBeTruthy();
+
+  await page.reload();
+  await page.getByText(/skip/i).click();
+  await page.getByRole('button', { name: /level creator/i }).click();
+  await expect.poll(() => canvas.evaluate((element, { x, y }) => {
+    const pixels = element.getContext('2d').getImageData(x + 5, y + 5, 1, 1).data;
+    return Array.from(pixels).slice(0, 3);
+  }, block)).toEqual([119, 136, 172]);
+});
+
 test('the palette can clear the lower canvas for editing on phones', async ({ browser }) => {
   for (const [width, height] of [[320, 568], [667, 375]]) {
     const context = await browser.newContext({ viewport: { width, height }, isMobile: true, hasTouch: true });

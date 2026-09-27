@@ -8,6 +8,7 @@ import IntroScreen from '@/components/IntroScreen';
 import { drawCreature, drawExplorer } from '@/game/characterArt';
 import { drawBeacon, drawPickup, drawSpaceBackdrop, drawStarShard, drawTerrain } from '@/game/worldArt';
 import { createEditorCreature } from '@/game/geometry';
+import { loadEditorDraft, saveEditorDraft } from '@/game/editorDraft';
 import { DIRECTION_KEYS, directionAtPoint, readGameplayInput } from '@/game/input';
 import { appendInputStep, createInputTranscript, sealInputTranscript } from '@/game/inputTranscript';
 import { takeFixedSteps } from '@/game/fixedStep';
@@ -429,20 +430,24 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
   };
 
   const saveCustomLevel = () => {
-      customLevelRef.current = JSON.parse(JSON.stringify(worldRef.current));
-      // Clean up runtime props
-      customLevelRef.current.offset = 0;
-      alert("Level Saved! Click 'Test Level' to play.");
+      const { level: draft, persisted } = saveEditorDraft(worldRef.current);
+      if (!draft) {
+          alert('This level has too many or invalid items to save.');
+          return false;
+      }
+      customLevelRef.current = draft;
+      alert(persisted
+          ? "Level saved in this browser. Click 'Test Level' to play."
+          : "Level saved for this session. Browser storage is unavailable or this draft is too large; click 'Test Level' to play.");
+      return true;
   };
 
   const enterEditor = () => {
       setGameState('editor');
-      if (!customLevelRef.current) {
-          initLevel('custom');
-      } else {
-          // Restore logic if needed, or just keep current world if we just paused testing
-          worldRef.current = JSON.parse(JSON.stringify(customLevelRef.current));
-          worldRef.current.offset = 0;
+      customLevelRef.current ||= loadEditorDraft();
+      initLevel('custom');
+      if (customLevelRef.current) {
+          worldRef.current.enemies = customLevelRef.current.enemies.map(enemy => ({ ...enemy }));
       }
   };
 
@@ -607,7 +612,7 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
               <Button aria-label="Eraser tool" size="icon" variant={selectedTool === 'eraser' ? 'default' : 'ghost'} onClick={() => setSelectedTool('eraser')} className="h-8 w-8 text-white hover:text-white"><Eraser className="h-4 w-4" /></Button>
               <Button aria-label="Toggle grid" size="icon" variant={showGrid ? 'default' : 'ghost'} onClick={() => setShowGrid(!showGrid)} className="h-8 w-8 text-white hover:text-white"><Grid className="h-4 w-4" /></Button>
               <Button aria-label="Save level" size="icon" variant="ghost" onClick={saveCustomLevel} className="h-8 w-8 text-green-400 hover:text-green-300"><Save className="h-4 w-4" /></Button>
-              <Button size="sm" variant="destructive" onClick={() => { saveCustomLevel(); initLevel('custom'); resetRunScore('custom'); setGameState('playing'); }} className="editor-test text-xs"><Play className="h-3 w-3 mr-1" /> TEST</Button>
+              <Button size="sm" variant="destructive" onClick={() => { if (saveCustomLevel()) { initLevel('custom'); resetRunScore('custom'); setGameState('playing'); } }} className="editor-test text-xs"><Play className="h-3 w-3 mr-1" /> TEST</Button>
             </div>
 
             {isPaletteOpen ? <div className="editor-palette absolute bottom-2 left-2 right-2 z-50 bg-black/85 p-2 rounded-lg border border-[#6756B8]">
