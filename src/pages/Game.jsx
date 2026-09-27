@@ -554,7 +554,7 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
         </div>
 
         {/* Game Canvas */}
-        <div className="game-stage relative overflow-hidden shadow-2xl shadow-black/50 border-4 border-[#6756B8]">
+        <div className="game-stage relative overflow-clip shadow-2xl shadow-black/50 border-4 border-[#6756B8]">
           <canvas
             ref={canvasRef}
             width={800}
@@ -570,9 +570,9 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
           {gameState === 'editor' && <>
             <div aria-label="Level creator tools" className="editor-tools absolute top-2 left-2 z-50 bg-black/85 rounded-lg border border-[#6756B8]">
               <div className="editor-tools-label text-white text-xs font-bold text-center">TOOLS</div>
-              <Button aria-label="Brush tool" size="icon" variant={selectedTool === 'brush' ? 'default' : 'ghost'} onClick={() => setSelectedTool('brush')} className="h-8 w-8"><Plus className="h-4 w-4" /></Button>
-              <Button aria-label="Eraser tool" size="icon" variant={selectedTool === 'eraser' ? 'default' : 'ghost'} onClick={() => setSelectedTool('eraser')} className="h-8 w-8"><Eraser className="h-4 w-4" /></Button>
-              <Button aria-label="Toggle grid" size="icon" variant={showGrid ? 'default' : 'ghost'} onClick={() => setShowGrid(!showGrid)} className="h-8 w-8"><Grid className="h-4 w-4" /></Button>
+              <Button aria-label="Brush tool" size="icon" variant={selectedTool === 'brush' ? 'default' : 'ghost'} onClick={() => setSelectedTool('brush')} className="h-8 w-8 text-white hover:text-white"><Plus className="h-4 w-4" /></Button>
+              <Button aria-label="Eraser tool" size="icon" variant={selectedTool === 'eraser' ? 'default' : 'ghost'} onClick={() => setSelectedTool('eraser')} className="h-8 w-8 text-white hover:text-white"><Eraser className="h-4 w-4" /></Button>
+              <Button aria-label="Toggle grid" size="icon" variant={showGrid ? 'default' : 'ghost'} onClick={() => setShowGrid(!showGrid)} className="h-8 w-8 text-white hover:text-white"><Grid className="h-4 w-4" /></Button>
               <Button aria-label="Save level" size="icon" variant="ghost" onClick={saveCustomLevel} className="h-8 w-8 text-green-400 hover:text-green-300"><Save className="h-4 w-4" /></Button>
               <Button size="sm" variant="destructive" onClick={() => { saveCustomLevel(); initLevel('custom'); resetRunScore('custom'); setGameState('playing'); }} className="editor-test text-xs"><Play className="h-3 w-3 mr-1" /> TEST</Button>
             </div>
