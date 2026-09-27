@@ -61,11 +61,11 @@ export function wardenOrbBounds(orb) {
   };
 }
 
-export function stepEnemyProjectile(orb, player, offset) {
+export function stepEnemyProjectile(orb, player, offset, legacyDamage = false) {
   orb.x += orb.velocityX;
   orb.frame = (orb.frame || 0) + 1;
   if (rectanglesOverlap(playerHurtbox(player), wardenOrbBounds(orb))) {
-    return { keep: false, contact: resolvePlayerDamage(player) };
+    return { keep: false, contact: resolvePlayerDamage(player, legacyDamage) };
   }
   return { keep: orb.x > offset - 100 && orb.x < offset + 900, contact: null };
 }

@@ -34,8 +34,23 @@ describe('shared campaign simulation', () => {
     state.player.y = 450;
     state.player.onGround = true;
 
-    advanceSimulation(state, idle, true);
+    advanceSimulation(state, idle, 2);
     expect(state.player).toMatchObject({ height: 65, y: 450 });
+  });
+
+  it.each([[3, 435], [4, 450]])('replays powered damage under rules %i at y=%i', (rulesVersion, y) => {
+    const state = createSimulationState();
+    state.world.platforms = [{ x: 0, y: 500, width: 800, height: 100, type: 'ground' }];
+    state.world.coins = [];
+    state.world.powerUps = [];
+    state.world.flag = null;
+    state.world.enemies = [{
+      type: 'prismite', x: 100, y: 464, width: 36, height: 36, velocityX: 0, alive: true,
+    }];
+    Object.assign(state.player, { y: 435, height: 65, powerUp: 'plasma', onGround: true });
+
+    expect(advanceSimulation(state, idle, rulesVersion).sounds).toContain('playDamage');
+    expect(state.player).toMatchObject({ y, height: 50, powerUp: 'small' });
   });
 
   it('awards pickups and returns presentation events without drawing or audio', () => {

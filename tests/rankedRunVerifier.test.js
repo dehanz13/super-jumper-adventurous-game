@@ -5,7 +5,7 @@ import { advanceSimulation, createSimulationState } from '../src/game/simulation
 import { createInitialLevelState } from '../src/game/worldState';
 import { resolveVerificationProfile } from '../src/game/verificationProfiles';
 
-function completedCampaign(versions = currentRunVersions(), legacyGrowth = false) {
+function completedCampaign(versions = currentRunVersions()) {
   const state = createSimulationState();
   const transcript = { ...createInputTranscript(), ...versions };
   const input = { left: false, right: true, jump: true, fire: false };
@@ -19,7 +19,7 @@ function completedCampaign(versions = currentRunVersions(), legacyGrowth = false
       state.runEnded = false;
     }
     appendInputStep(transcript, input);
-    outcome = advanceSimulation(state, input, legacyGrowth).transition?.state || null;
+    outcome = advanceSimulation(state, input, versions.rulesVersion).transition?.state || null;
     if (outcome === 'win') break;
   }
   expect(outcome).toBe('win');
@@ -90,7 +90,7 @@ describe('ranked campaign verifier', () => {
         state.runEnded = false;
       }
       appendInputStep(oldTranscript, input);
-      outcome = advanceSimulation(state, input).transition?.state || null;
+      outcome = advanceSimulation(state, input, versions.rulesVersion).transition?.state || null;
       if (outcome === 'win') break;
     }
     expect(outcome).toBe('win');
@@ -105,11 +105,22 @@ describe('ranked campaign verifier', () => {
   it('verifies a seven-sector run pinned to the previous growth rules', () => {
     const versions = { ...currentRunVersions(), rulesVersion: 2 };
     const oldRun = { ...run, versions };
-    const completed = completedCampaign(versions, true);
+    const completed = completedCampaign(versions);
     const finishedAt = Math.ceil(completed.transcript.steps * 1000 / 60) + 1000;
 
     expect(verifyRankedCampaign({
       run: oldRun, transcript: completed.transcript, claimedScore: completed.score, nowMs: finishedAt,
+    }).score).toBe(completed.score);
+  });
+
+  it('verifies a run pinned to the previous powered damage rules', () => {
+    const versions = { ...currentRunVersions(), rulesVersion: 3 };
+    const completed = completedCampaign(versions);
+    const finishedAt = Math.ceil(completed.transcript.steps * 1000 / 60) + 1000;
+
+    expect(verifyRankedCampaign({
+      run: { ...run, versions }, transcript: completed.transcript,
+      claimedScore: completed.score, nowMs: finishedAt,
     }).score).toBe(completed.score);
   });
 });

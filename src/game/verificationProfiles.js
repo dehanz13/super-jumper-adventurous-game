@@ -16,6 +16,12 @@ const previousSevenSectorVersions = Object.freeze({
   scoringVersion: SCORING_VERSION,
 });
 
+const previousDamageVersions = Object.freeze({
+  levelSetVersion: LEVEL_SET_VERSION,
+  rulesVersion: 3,
+  scoringVersion: SCORING_VERSION,
+});
+
 // Keep a released profile and its replay implementation until every run
 // started under it has passed the finish deadline. Never point an old version
 // at a new replay implementation after changing maps, rules, or scoring.
@@ -44,6 +50,13 @@ const previousSevenSectorProfile = Object.freeze({
   replayCampaign: transcript => replayPreviousCampaign(transcript, previousSevenSectorVersions),
 });
 
+const previousDamageProfile = Object.freeze({
+  versions: previousDamageVersions,
+  stepMs: STEP_MS,
+  finalLevel: 7,
+  replayCampaign: transcript => replayPreviousCampaign(transcript, previousDamageVersions),
+});
+
 function profileKey(versions) {
   return JSON.stringify([
     versions?.levelSetVersion,
@@ -56,6 +69,7 @@ function profileKey(versions) {
 const profiles = new Map();
 profiles.set(profileKey(previousProfile.versions), previousProfile);
 profiles.set(profileKey(previousSevenSectorProfile.versions), previousSevenSectorProfile);
+profiles.set(profileKey(previousDamageProfile.versions), previousDamageProfile);
 profiles.set(profileKey(currentProfile.versions), currentProfile);
 
 export function currentVerificationProfile() {
