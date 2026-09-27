@@ -72,6 +72,7 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
   const [selectedTool, setSelectedTool] = useState('brush'); // brush, eraser, hand
   const [selectedItem, setSelectedItem] = useState({ type: 'platform', subType: 'brick' });
   const [editorGroup, setEditorGroup] = useState('terrain');
+  const [isPaletteOpen, setPaletteOpen] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
   const customLevelRef = useRef(null);
 
@@ -576,13 +577,16 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
               <Button size="sm" variant="destructive" onClick={() => { saveCustomLevel(); initLevel('custom'); resetRunScore('custom'); setGameState('playing'); }} className="editor-test text-xs"><Play className="h-3 w-3 mr-1" /> TEST</Button>
             </div>
 
-            <div className="editor-palette absolute bottom-2 left-2 right-2 z-50 bg-black/85 p-2 rounded-lg border border-[#6756B8]">
-              <div role="tablist" aria-label="Level creator palette" className="editor-tabs flex gap-1 mb-2">
-                {EDITOR_GROUPS.map(group => <button key={group.id} type="button" role="tab" aria-selected={editorGroup === group.id}
-                  onClick={() => setEditorGroup(group.id)}
-                  className={`flex-1 rounded px-2 py-1 text-xs font-bold text-white ${editorGroup === group.id ? 'bg-[#137F87]' : 'bg-[#303752]'}`}>
-                  {group.label}
-                </button>)}
+            {isPaletteOpen ? <div className="editor-palette absolute bottom-2 left-2 right-2 z-50 bg-black/85 p-2 rounded-lg border border-[#6756B8]">
+              <div className="editor-palette-header flex gap-1 mb-2">
+                <div role="tablist" aria-label="Level creator palette" className="editor-tabs flex flex-1 gap-1">
+                  {EDITOR_GROUPS.map(group => <button key={group.id} type="button" role="tab" aria-selected={editorGroup === group.id}
+                    onClick={() => setEditorGroup(group.id)}
+                    className={`flex-1 rounded px-2 py-1 text-xs font-bold text-white ${editorGroup === group.id ? 'bg-[#137F87]' : 'bg-[#303752]'}`}>
+                    {group.label}
+                  </button>)}
+                </div>
+                <button type="button" aria-label="Hide item palette" onClick={() => setPaletteOpen(false)} className="editor-hide rounded bg-[#303752] px-2 text-white font-bold">×</button>
               </div>
               <div className="editor-palette-grid" role="tabpanel">
                 {EDITOR_GROUPS.find(group => group.id === editorGroup).items.map(item => (
@@ -594,7 +598,8 @@ export default function Game({ onRunComplete = null, runClient = null, boardClie
                   </button>
                 ))}
               </div>
-            </div>
+            </div> : <button type="button" aria-label="Show item palette" onClick={() => setPaletteOpen(true)}
+              className="editor-palette-toggle absolute top-2 right-2 z-50 h-10 w-12 rounded-lg border border-[#6756B8] bg-black/85 text-[10px] font-bold text-white">ITEMS</button>}
           </>}
 
           {/* Overlays */}
