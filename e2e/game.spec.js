@@ -249,6 +249,34 @@ test('a finger drag paints multiple blocks in the level creator', async ({ brows
   await context.close();
 });
 
+test('the palette can clear the lower canvas for editing on phones', async ({ browser }) => {
+  for (const [width, height] of [[320, 568], [667, 375]]) {
+    const context = await browser.newContext({ viewport: { width, height }, isMobile: true, hasTouch: true });
+    const page = await context.newPage();
+    await page.goto('/');
+    await page.getByText(/skip/i).click();
+    await page.getByRole('button', { name: /level creator/i }).click();
+    await page.getByRole('button', { name: 'Alloy Block' }).click();
+
+    const canvas = page.locator('canvas');
+    const point = await canvas.evaluate(node => {
+      const bounds = node.getBoundingClientRect();
+      return { x: bounds.left + 180 * bounds.width / node.width, y: bounds.top + 496 * bounds.height / node.height };
+    });
+    expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('.editor-palette') !== null, point)).toBe(true);
+
+    await page.getByRole('button', { name: 'Hide item palette' }).click();
+    await expect(page.getByRole('button', { name: 'Show item palette' })).toBeVisible();
+    expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.tagName, point)).toBe('CANVAS');
+    await page.touchscreen.tap(point.x, point.y);
+    await expect.poll(() => canvas.evaluate(node => Array.from(node.getContext('2d').getImageData(165, 485, 1, 1).data).slice(0, 3))).toEqual([119, 136, 172]);
+
+    await page.getByRole('button', { name: 'Show item palette' }).click();
+    await expect(page.getByRole('button', { name: 'Alloy Block' })).toHaveAttribute('aria-pressed', 'true');
+    await context.close();
+  }
+});
+
 test('dragging across the direction pad reverses movement', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'mobile viewport only');
   await page.goto('/');
